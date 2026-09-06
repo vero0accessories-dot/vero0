@@ -1,0 +1,32 @@
+[
+  {
+    "id": "2327727d-8c0c-42ee-a95c-fec2037ea49d",
+    "userId": "dc976127-9108-4e00-beee-67a92e719675",
+    "userName": "arthurdevelopment101",
+    "userEmail": "arthurdevelopment101@gmail.com",
+    "userAvatar": "default",
+    "userTier": "Bronze",
+    "points": -250,
+    "type": "redeemed",
+    "description": "استرداد مكافأة / Reward Redeemed (-250 PTS)",
+    "reason": "استرداد مكافأة",
+    "reference": "",
+    "performedBy": "System",
+    "createdAt": "2026-09-03T14:07:32.285Z"
+  },
+  {
+    "id": "d27c6b1b-8d0a-47f3-acc1-4fe63f1d6695",
+    "userId": "dc976127-9108-4e00-beee-67a92e719675",
+    "userName": "arthurdevelopment101",
+    "userEmail": "arthurdevelopment101@gmail.com",
+    "userAvatar": "default",
+    "userTier": "Bronze",
+    "points": 1250,
+    "type": "earned",
+    "description": "إضافة نقاط / Points Credited (+1250 PTS)",
+    "reason": "نقاط مكتسبة",
+    "reference": "",
+    "performedBy": "System",
+    "createdAt": "2026-09-03T14:07:28.034Z"
+  }
+]

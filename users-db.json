@@ -1,0 +1,46 @@
+[
+  {
+    "id": "0faeb040-8ae6-4eb5-8e21-5eda8a4700da",
+    "name": "VERO Customer",
+    "email": "customer@vero.com",
+    "avatar": "default",
+    "role": "customer",
+    "tier": "Gold",
+    "loyaltyPoints": 1000,
+    "totalSpent": 25000,
+    "joinedDate": "2026-09-03"
+  },
+  {
+    "id": "c8b3b828-8a10-4ab6-8a1c-0ca8c6285619",
+    "name": "Arthur Collector",
+    "email": "arthurdevelopment101@gmail.com",
+    "avatar": "default",
+    "role": "customer",
+    "tier": "Gold",
+    "loyaltyPoints": 1250,
+    "totalSpent": 42000,
+    "joinedDate": "2026-09-03"
+  },
+  {
+    "id": "dff41e77-b168-415c-9e72-10a74eb7584b",
+    "name": "VERO System Admin",
+    "email": "admin@vero.com",
+    "avatar": "default",
+    "role": "admin",
+    "tier": "Platinum",
+    "loyaltyPoints": 5000,
+    "totalSpent": 100000,
+    "joinedDate": "2026-09-03"
+  },
+  {
+    "id": "d08429b0-1b60-48f7-8d97-040d058395cf",
+    "name": "VERO Executive Admin",
+    "email": "vero2026@vero.com",
+    "avatar": "default",
+    "role": "admin",
+    "tier": "Platinum",
+    "loyaltyPoints": 5000,
+    "totalSpent": 125000,
+    "joinedDate": "2026-09-03"
+  }
+]

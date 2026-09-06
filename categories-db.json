@@ -1,0 +1,160 @@
+[
+  {
+    "id": "accessories",
+    "name": "Accessories",
+    "name_ar": "الإكسسوارات",
+    "name_en": "Accessories",
+    "slug": "accessories",
+    "image": "/images/artisan-watch-roll.jpg",
+    "description": "{\"genders\":[\"Men\",\"Women\",\"Unisex\"],\"target_gender\":\"All\"}",
+    "parent_id": null,
+    "status": "active",
+    "sort_order": 0,
+    "created_at": "2026-08-31T16:41:33.767159+00:00",
+    "updated_at": "2026-09-06T12:45:17.967309+00:00",
+    "target_gender": "All",
+    "genders": [
+      "Men",
+      "Women",
+      "Unisex"
+    ]
+  },
+  {
+    "id": "bracelets",
+    "name": "Bracelets",
+    "name_ar": "الأساور",
+    "name_en": "Bracelets",
+    "slug": "bracelets",
+    "image": "/images/eternal-bangle.jpg",
+    "description": "{\"genders\":[\"Men\",\"Women\",\"Unisex\"],\"target_gender\":\"All\"}",
+    "parent_id": null,
+    "status": "active",
+    "sort_order": 0,
+    "created_at": "2026-08-31T16:41:33.767159+00:00",
+    "updated_at": "2026-09-06T12:45:17.967309+00:00",
+    "target_gender": "All",
+    "genders": [
+      "Men",
+      "Women",
+      "Unisex"
+    ]
+  },
+  {
+    "id": "earrings",
+    "name": "Earrings",
+    "name_ar": "الأقراط",
+    "name_en": "Earrings",
+    "slug": "earrings",
+    "image": "/images/desert-moon-hoops.jpg",
+    "description": "{\"genders\":[\"Women\"],\"target_gender\":\"Women\"}",
+    "parent_id": null,
+    "status": "active",
+    "sort_order": 0,
+    "created_at": "2026-08-31T16:41:33.767159+00:00",
+    "updated_at": "2026-09-06T12:45:17.967309+00:00",
+    "target_gender": "Women",
+    "genders": [
+      "Women"
+    ]
+  },
+  {
+    "id": "fine-jewelry",
+    "name": "Fine Jewelry",
+    "name_ar": "المجوهرات الراقية",
+    "name_en": "Fine Jewelry",
+    "slug": "fine-jewelry",
+    "image": "https://lh3.googleusercontent.com/aida-public/AB6AXuB_4xPadl5w6Pl2wmap9TNWjuW3eRqmSaee8UcVUYb5Ob0tjxyVXXgSUz8bd800TgShznRuwLsCSE8fL8g54lW8D6Y2Wqn77Y3VnnDy11ZQQyS78UrFyUgxqRXe83BtXdaR7o05YC071Tjfyge5uII8vI9eb_n0zITggflZzz8_ocIceRDAsQovQqPZTN6SXT9FkEnH750_FvFUxz-___-L_RW-wCIyddPds8SWGNUvJZlb-z3tgbVqUqsnmttQOxLDZXqdfrdHuOs",
+    "description": "{\"genders\":[\"Men\",\"Women\",\"Unisex\"],\"target_gender\":\"All\"}",
+    "parent_id": null,
+    "status": "active",
+    "sort_order": 0,
+    "created_at": "2026-08-31T16:41:33.767159+00:00",
+    "updated_at": "2026-09-06T12:45:17.967309+00:00",
+    "target_gender": "All",
+    "genders": [
+      "Men",
+      "Women",
+      "Unisex"
+    ]
+  },
+  {
+    "id": "leather-goods",
+    "name": "Leather Goods",
+    "name_ar": "المنتجات الجلدية",
+    "name_en": "Leather Goods",
+    "slug": "leather-goods",
+    "image": "/images/essential-cardholder.jpg",
+    "description": "{\"genders\":[\"Men\",\"Women\",\"Unisex\"],\"target_gender\":\"All\"}",
+    "parent_id": null,
+    "status": "active",
+    "sort_order": 0,
+    "created_at": "2026-08-31T16:41:33.767159+00:00",
+    "updated_at": "2026-09-06T12:45:17.967309+00:00",
+    "target_gender": "All",
+    "genders": [
+      "Men",
+      "Women",
+      "Unisex"
+    ]
+  },
+  {
+    "id": "necklaces",
+    "name": "Necklaces",
+    "name_ar": "القلائد والسلاسل",
+    "name_en": "Necklaces",
+    "slug": "necklaces",
+    "image": "/images/luxury-necklace-banner.jpg",
+    "description": "{\"genders\":[\"Men\",\"Women\",\"Unisex\"],\"target_gender\":\"All\"}",
+    "parent_id": null,
+    "status": "active",
+    "sort_order": 0,
+    "created_at": "2026-08-31T16:41:33.767159+00:00",
+    "updated_at": "2026-09-06T12:45:17.967309+00:00",
+    "target_gender": "All",
+    "genders": [
+      "Men",
+      "Women",
+      "Unisex"
+    ]
+  },
+  {
+    "id": "rings",
+    "name": "Rings",
+    "name_ar": "الخواتم",
+    "name_en": "Rings",
+    "slug": "rings",
+    "image": "/images/sculpted-aurelian-ring.jpg",
+    "description": "{\"genders\":[\"Men\",\"Women\",\"Unisex\"],\"target_gender\":\"All\"}",
+    "parent_id": null,
+    "status": "active",
+    "sort_order": 0,
+    "created_at": "2026-08-31T16:41:33.767159+00:00",
+    "updated_at": "2026-09-06T12:45:17.967309+00:00",
+    "target_gender": "All",
+    "genders": [
+      "Men",
+      "Women",
+      "Unisex"
+    ]
+  },
+  {
+    "id": "timepieces",
+    "name": "Timepieces",
+    "name_ar": "الساعات الفاخرة",
+    "name_en": "Timepieces",
+    "slug": "timepieces",
+    "image": "https://lh3.googleusercontent.com/aida-public/AB6AXuAHURVDMw0Ut_yNnemHeLgqN9kEmRJy9KfyIJhWGm36fQh-CMtrO0pGYuaCr4MR-OaDy0sUnfzCwvRWYY9815RVkpasZq00PZ0fRbmOmCVpkPwSWKRtiicrCUREgDhVRGMuHYa792wqM27VJFjYjxLBhHEpkVf0Ipvb3HquyCydhbrE5uPWIC5KS6E4w4d31wBTOnNQIu3ooZafSZ0qWewaHaQeiPuHaoRpnPOY5j01Hhjk48HWuTgKuMfPyIs5QbInR7O3tUJq5c8",
+    "description": "{\"genders\":[\"Men\",\"Women\",\"Unisex\"],\"target_gender\":\"All\"}",
+    "parent_id": null,
+    "status": "active",
+    "sort_order": 0,
+    "created_at": "2026-08-31T16:41:33.767159+00:00",
+    "updated_at": "2026-09-06T12:45:17.967309+00:00",
+    "target_gender": "All",
+    "genders": [
+      "Men",
+      "Women",
+      "Unisex"
+    ]
+  }
+]

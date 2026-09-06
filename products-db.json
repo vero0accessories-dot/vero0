@@ -1,0 +1,76 @@
+[
+  {
+    "id": "ring",
+    "name": "ring",
+    "categoryId": "rings",
+    "categoryName": "Rings",
+    "price": 1310,
+    "pointsEarned": 13,
+    "image": "https://lh3.googleusercontent.com/aida-public/AB6AXuAddIhaoIoctIr0SZvOxl2amgoVXs5GW4AyMZuYqzRetb-PH8shfjL6df3_PiwyH1Hq439E0Lx2BbcFBHSvkTXKFeVAyN92YRXuBaqw5zNRh1EeGjfO57TlVuURTAiBXcnB5JXznCQbwsDIBHNH4A67hRHjmOnUwZMTbvAfO3y2yBNdTetjXHWJtoZ6VB_1S7MgOifVHC4W8P2FoG_bM4ak1sMXvZPk3gc-CSGh5MJoRqjQIgpDVA9Ml4wexbNyxsv5WZItb_S1I58",
+    "secondaryImages": [],
+    "description": "An authentic quiet luxury piece hand-finished with exceptional Italian craftsmanship.",
+    "tagline": "\"ring\"",
+    "isNew": false,
+    "isPreOrder": false,
+    "materialOptions": [
+      "#E5D5BC",
+      "#E5E4E2"
+    ],
+    "sizeOptions": [
+      "Standard",
+      "Premium"
+    ],
+    "details": [
+      "18k Gold Finish",
+      "Hand-polished"
+    ],
+    "craftsmanship": "Made with traditional Italian jewelry techniques",
+    "stock": 10,
+    "sku": "VERO-RNG-421",
+    "brand": "VERO",
+    "category": "Rings",
+    "gender": "Women",
+    "costPrice": 0,
+    "lowStockThreshold": 3,
+    "status": "active",
+    "variants": [],
+    "seoTitle": "ring | VERO Luxury"
+  },
+  {
+    "id": "we",
+    "name": "we",
+    "categoryId": "accessories",
+    "categoryName": "Accessories",
+    "price": 700,
+    "pointsEarned": 1,
+    "image": "https://lh3.googleusercontent.com/aida-public/AB6AXuA55XK6inPikYx_KnduhFvjR4J4r-Fz_0_MZeirVYlQnJcPeo3B3yJbFLZxM2oUqj2K4hOYY0VewYoDXWp5MzATq0mNes3bavvaIuwaKC-v7bFmUPeG5D1UbHy40cYoAniwy7x5OMf602l7xaIr3pzsyO28iOD8e4hdSxVOIQPeN0U8dossai-1QVPhtz7XRb9b0NxL8vjc5GglkDdH37aQtDOcZHbyQ7h9Ad-kMAtUcJAOHqIhAi6YLgg8Dcgt8eQGSeia3zX9Wl0",
+    "secondaryImages": [],
+    "description": "An authentic quiet luxury piece hand-finished with exceptional Italian craftsmanship.",
+    "tagline": "\"we\"",
+    "isNew": true,
+    "isPreOrder": false,
+    "materialOptions": [
+      "#E5D5BC",
+      "#E5E4E2"
+    ],
+    "sizeOptions": [
+      "Standard",
+      "Premium"
+    ],
+    "details": [
+      "18k Gold Finish",
+      "Hand-polished"
+    ],
+    "craftsmanship": "Made with traditional Italian jewelry techniques",
+    "stock": 10,
+    "sku": "VERO-RNG-679",
+    "brand": "VERO",
+    "category": "Accessories",
+    "gender": "Men",
+    "costPrice": 0,
+    "lowStockThreshold": 3,
+    "status": "active",
+    "variants": [],
+    "seoTitle": "we | VERO Luxury"
+  }
+]

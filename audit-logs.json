@@ -1,0 +1,142 @@
+[
+  {
+    "id": "audit-1787223374972-j1ya",
+    "timestamp": "2026-08-20T10:56:14.972Z",
+    "userId": "23b32218-6120-4e6a-866e-a5e63f6885ea",
+    "userEmail": "fatima.test@domain.com",
+    "action": "User Account Registration",
+    "targetResource": "Auth System",
+    "details": "Registered new account with 250 welcome loyalty points",
+    "ipAddress": "127.0.0.1"
+  },
+  {
+    "id": "audit-1787223371215-dcy5",
+    "timestamp": "2026-08-20T10:56:11.215Z",
+    "userId": "e4d447f4-885d-40c3-9b66-b5d7b73ea747",
+    "userEmail": "vero2026@vero.com",
+    "action": "User Login",
+    "targetResource": "Auth System",
+    "details": "User logged in successfully as admin",
+    "ipAddress": "127.0.0.1"
+  },
+  {
+    "id": "audit-1787223361187-l6ll",
+    "timestamp": "2026-08-20T10:56:01.187Z",
+    "userId": "e4d447f4-885d-40c3-9b66-b5d7b73ea747",
+    "userEmail": "vero2026@vero.com",
+    "action": "User Account Registration",
+    "targetResource": "Auth System",
+    "details": "Registered new account with 250 welcome loyalty points",
+    "ipAddress": "127.0.0.1"
+  },
+  {
+    "id": "audit-1787223298602-d61e",
+    "timestamp": "2026-08-20T10:54:58.602Z",
+    "userId": "guest",
+    "userEmail": "vero2026@vero.com",
+    "action": "Failed Registration Attempt",
+    "targetResource": "Auth System",
+    "details": "Signup failed: {}",
+    "ipAddress": "127.0.0.1"
+  },
+  {
+    "id": "audit-1787223199462-7fd1",
+    "timestamp": "2026-08-20T10:53:19.462Z",
+    "userId": "guest",
+    "userEmail": "vero2026@vero.com",
+    "action": "Failed Registration Attempt",
+    "targetResource": "Auth System",
+    "details": "Signup failed: {}",
+    "ipAddress": "127.0.0.1"
+  },
+  {
+    "id": "audit-1787223184712-1t4x",
+    "timestamp": "2026-08-20T10:53:04.712Z",
+    "userId": "guest",
+    "userEmail": "vero2026@vero.com",
+    "action": "Failed Login Attempt",
+    "targetResource": "Auth System",
+    "details": "Invalid credentials or unregistered account: Invalid login credentials",
+    "ipAddress": "127.0.0.1"
+  },
+  {
+    "id": "audit-1787223180915-ox85",
+    "timestamp": "2026-08-20T10:53:00.915Z",
+    "userId": "guest",
+    "userEmail": "vero2026@vero.com",
+    "action": "Failed Registration Attempt",
+    "targetResource": "Auth System",
+    "details": "Signup failed: {}",
+    "ipAddress": "127.0.0.1"
+  },
+  {
+    "id": "audit-1787223135623-04kh",
+    "timestamp": "2026-08-20T10:52:15.623Z",
+    "userId": "guest",
+    "userEmail": "vero2026@vero.com",
+    "action": "Failed Registration Attempt",
+    "targetResource": "Auth System",
+    "details": "Signup failed: {}",
+    "ipAddress": "127.0.0.1"
+  },
+  {
+    "id": "audit-1787223134360-p8iv",
+    "timestamp": "2026-08-20T10:52:14.360Z",
+    "userId": "guest",
+    "userEmail": "vero2026@vero.com",
+    "action": "Failed Registration Attempt",
+    "targetResource": "Auth System",
+    "details": "Signup failed: {}",
+    "ipAddress": "127.0.0.1"
+  },
+  {
+    "id": "audit-1787223133274-t03s",
+    "timestamp": "2026-08-20T10:52:13.274Z",
+    "userId": "guest",
+    "userEmail": "vero2026@vero.com",
+    "action": "Failed Registration Attempt",
+    "targetResource": "Auth System",
+    "details": "Signup failed: {}",
+    "ipAddress": "127.0.0.1"
+  },
+  {
+    "id": "audit-1787223127262-ea24",
+    "timestamp": "2026-08-20T10:52:07.263Z",
+    "userId": "guest",
+    "userEmail": "vero2026@vero.com",
+    "action": "Failed Registration Attempt",
+    "targetResource": "Auth System",
+    "details": "Signup failed: {}",
+    "ipAddress": "127.0.0.1"
+  },
+  {
+    "id": "audit-1787223122657-z6qy",
+    "timestamp": "2026-08-20T10:52:02.657Z",
+    "userId": "guest",
+    "userEmail": "vero2026@vero.com",
+    "action": "Failed Login Attempt",
+    "targetResource": "Auth System",
+    "details": "Invalid credentials or unregistered account: Invalid login credentials",
+    "ipAddress": "127.0.0.1"
+  },
+  {
+    "id": "audit-1787223120038-7hoo",
+    "timestamp": "2026-08-20T10:52:00.038Z",
+    "userId": "guest",
+    "userEmail": "vero2026@vero.com",
+    "action": "Failed Registration Attempt",
+    "targetResource": "Auth System",
+    "details": "Signup failed: {}",
+    "ipAddress": "127.0.0.1"
+  },
+  {
+    "id": "audit-1787223114616-h5nk",
+    "timestamp": "2026-08-20T10:51:54.616Z",
+    "userId": "guest",
+    "userEmail": "vero2026@vero.com",
+    "action": "Failed Registration Attempt",
+    "targetResource": "Auth System",
+    "details": "Signup failed: {}",
+    "ipAddress": "127.0.0.1"
+  }
+]

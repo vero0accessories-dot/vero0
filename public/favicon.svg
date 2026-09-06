@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="goldRing" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#CBB071" />
+      <stop offset="30%" stop-color="#F2E3B5" />
+      <stop offset="70%" stop-color="#9C7938" />
+      <stop offset="100%" stop-color="#D8BC7E" />
+    </linearGradient>
+    <radialGradient id="bgBg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#F3ECE1" />
+      <stop offset="85%" stop-color="#E5DCCE" />
+      <stop offset="100%" stop-color="#D9CFC0" />
+    </radialGradient>
+    <filter id="subtleShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#5C4D38" flood-opacity="0.15" />
+    </filter>
+  </defs>
+
+  <clipPath id="circleClip">
+    <circle cx="256" cy="256" r="250" />
+  </clipPath>
+
+  <g clip-path="url(#circleClip)">
+    <!-- Background Cream/Beige -->
+    <circle cx="256" cy="256" r="250" fill="url(#bgBg)" />
+    
+    <!-- Outer Gold Metallic Ring -->
+    <circle cx="256" cy="256" r="238" fill="none" stroke="url(#goldRing)" stroke-width="14" />
+    <circle cx="256" cy="256" r="230" fill="none" stroke="#7A5F29" stroke-width="1" opacity="0.4" />
+    <circle cx="256" cy="256" r="245" fill="none" stroke="#FFFFFF" stroke-width="1.5" opacity="0.6" />
+
+    <!-- Luxury V Monogram -->
+    <g fill="#211F1D" filter="url(#subtleShadow)">
+      <!-- Top-left Serif -->
+      <path d="M 102 152 H 202 V 164 H 102 Z" />
+
+      <!-- Left Arm - Outer Thin Line -->
+      <path d="M 116 172 L 236 408 L 247 408 L 127 172 Z" />
+
+      <!-- Left Arm - Main Thick Stroke -->
+      <path d="M 150 172 L 264 408 H 280 L 190 172 Z" />
+
+      <!-- Right Arm & Top-Right Serif -->
+      <path d="M 298 288 L 358 172 H 328 V 152 H 408 V 164 H 388 L 264 408 Z" />
+    </g>
+  </g>
+</svg>
