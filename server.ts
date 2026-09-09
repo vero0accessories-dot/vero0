@@ -33,6 +33,14 @@ import {
   computeInventoryKPIs,
   generateSkuForProduct,
 } from "./src/serverInventory";
+import {
+  getPostgresPool,
+  isPostgresConfigured,
+  createPostgresClient,
+  checkPostgresHealth,
+  initializePostgresDatabase,
+  closePostgresPool,
+} from "./server/db";
 
 // Load environment variables from .env files
 const envFiles = [".env.local", ".env"];
@@ -175,7 +183,19 @@ function isSupabaseConfigured(): boolean {
 }
 
 let dbClient: any = null;
+let pgClient: any = null;
+
 function getSupabase() {
+  if (isPostgresConfigured()) {
+    const pool = getPostgresPool();
+    if (pool) {
+      if (!pgClient) {
+        pgClient = createPostgresClient(pool);
+        console.log("[Express Server] Database connection established -> Self-Hosted PostgreSQL");
+      }
+      return pgClient;
+    }
+  }
   if (isSupabaseConfigured()) {
     if (!dbClient) {
       const { url, key } = resolveSupabaseEnv();
@@ -190,12 +210,16 @@ function getSupabase() {
 // Log startup environment diagnostics
 const initialEnv = resolveSupabaseEnv();
 const initialConfigured = isSupabaseConfigured();
+const initialPostgres = isPostgresConfigured();
 console.log(`=======================================================`);
 console.log(`[Express Server Startup Diagnostic]`);
 console.log(`Loaded Env Files: ${loadedEnvFiles.join(", ") || "None"}`);
+console.log(`PostgreSQL Configured: ${initialPostgres ? "YES (Self-Hosted)" : "NO"}`);
 console.log(`Resolved Supabase URL: ${initialEnv.url || "MISSING"}`);
 console.log(`Resolved Supabase Key: ${initialEnv.key ? "PRESENT (" + initialEnv.key.length + " chars)" : "MISSING"}`);
-if (initialConfigured) {
+if (initialPostgres) {
+  console.log(`Status: ✅ Self-Hosted PostgreSQL Database ACTIVE`);
+} else if (initialConfigured) {
   console.log(`Status: ✅ Supabase Live Database Connection ACTIVE`);
 } else {
   console.warn(`Status: ⚠️ Demo Mode Active`);
@@ -360,6 +384,9 @@ async function seedSupabaseDatabase() {
       ], { onConflict: "id" });
     }
 
+    // 6. Egyptian Shipping Rates
+    await syncShippingRatesWithSupabase();
+
     console.log("[Supabase Auto-Seed] ✅ Auto-seeding check completed successfully!");
   } catch (err) {
     console.error("[Supabase Auto-Seed Error]:", err);
@@ -423,6 +450,7 @@ const AUDIT_LOGS_FILE = path.join(process.cwd(), "audit-logs.json");
 const LOYALTY_TRANSACTIONS_FILE = path.join(process.cwd(), "loyalty-transactions-db.json");
 const DB_FILE = path.join(process.cwd(), "products-db.json");
 const ORDERS_FILE = path.join(process.cwd(), "orders-db.json");
+const SHIPPING_RATES_FILE = path.join(process.cwd(), "shipping-rates-db.json");
 const NOTIFICATIONS_FILE = path.join(process.cwd(), "notifications-db.json");
 const CATEGORIES_FILE = path.join(process.cwd(), "categories-db.json");
 const USERS_FILE = path.join(process.cwd(), "users-db.json");
@@ -757,6 +785,203 @@ function saveLoyaltyTransactionToDisk(tx: any) {
     fs.writeFileSync(LOYALTY_TRANSACTIONS_FILE, JSON.stringify(list, null, 2), "utf-8");
   } catch (err) {
     console.error("Error saving loyalty transaction to disk:", err);
+  }
+}
+
+// =============================================================================
+// OFFICIAL EGYPTIAN GOVERNORATES & AUTOMATIC SHIPPING RATES SYSTEM
+// =============================================================================
+const DEFAULT_SHIPPING_RATES = [
+  { id: "cairo", governorate: "Cairo", governorate_ar: "القاهرة", rate: 50, is_active: true },
+  { id: "giza", governorate: "Giza", governorate_ar: "الجيزة", rate: 50, is_active: true },
+  { id: "qalyubia", governorate: "Qalyubia", governorate_ar: "القليوبية", rate: 60, is_active: true },
+  { id: "alexandria", governorate: "Alexandria", governorate_ar: "الإسكندرية", rate: 70, is_active: true },
+  { id: "dakahlia", governorate: "Dakahlia", governorate_ar: "الدقهلية", rate: 70, is_active: true },
+  { id: "sharqia", governorate: "Sharqia", governorate_ar: "الشرقية", rate: 70, is_active: true },
+  { id: "gharbia", governorate: "Gharbia", governorate_ar: "الغربية", rate: 70, is_active: true },
+  { id: "monufia", governorate: "Monufia", governorate_ar: "المنوفية", rate: 70, is_active: true },
+  { id: "beheira", governorate: "Beheira", governorate_ar: "البحيرة", rate: 75, is_active: true },
+  { id: "kafr_el_sheikh", governorate: "Kafr El Sheikh", governorate_ar: "كفر الشيخ", rate: 75, is_active: true },
+  { id: "damietta", governorate: "Damietta", governorate_ar: "دمياط", rate: 75, is_active: true },
+  { id: "port_said", governorate: "Port Said", governorate_ar: "بورسعيد", rate: 75, is_active: true },
+  { id: "ismailia", governorate: "Ismailia", governorate_ar: "الإسماعيلية", rate: 75, is_active: true },
+  { id: "suez", governorate: "Suez", governorate_ar: "السويس", rate: 75, is_active: true },
+  { id: "fayoum", governorate: "Fayoum", governorate_ar: "الفيوم", rate: 80, is_active: true },
+  { id: "beni_suef", governorate: "Beni Suef", governorate_ar: "بني سويف", rate: 80, is_active: true },
+  { id: "minya", governorate: "Minya", governorate_ar: "المنيا", rate: 90, is_active: true },
+  { id: "assiut", governorate: "Assiut", governorate_ar: "أسيوط", rate: 90, is_active: true },
+  { id: "sohag", governorate: "Sohag", governorate_ar: "سوهاج", rate: 90, is_active: true },
+  { id: "qena", governorate: "Qena", governorate_ar: "قنا", rate: 90, is_active: true },
+  { id: "luxor", governorate: "Luxor", governorate_ar: "الأقصر", rate: 90, is_active: true },
+  { id: "aswan", governorate: "Aswan", governorate_ar: "أسوان", rate: 90, is_active: true },
+  { id: "red_sea", governorate: "Red Sea", governorate_ar: "البحر الأحمر", rate: 90, is_active: true },
+  { id: "new_valley", governorate: "New Valley", governorate_ar: "الوادي الجديد", rate: 90, is_active: true },
+  { id: "north_sinai", governorate: "North Sinai", governorate_ar: "شمال سيناء", rate: 90, is_active: true },
+  { id: "south_sinai", governorate: "South Sinai", governorate_ar: "جنوب سيناء", rate: 90, is_active: true },
+  { id: "matrouh", governorate: "Matrouh", governorate_ar: "مطروح", rate: 90, is_active: true },
+];
+
+function normalizeGovernorateId(input?: string | null): string | null {
+  if (!input || typeof input !== "string") return null;
+
+  const clean = input
+    .trim()
+    .toLowerCase()
+    .replace(/[–—_]/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/\b(governorate|gov|muhafazah|muhafazat|province|city|region)\b/gi, "")
+    .replace(/(محافظة|مدينة|منطقة)/g, "")
+    .trim();
+
+  if (!clean) return null;
+
+  // Direct match against canonical IDs
+  const directId = DEFAULT_SHIPPING_RATES.find((g) => g.id === clean || g.id === clean.replace(/\s+/g, "_"));
+  if (directId) return directId.id;
+
+  const stripArabic = (str: string) =>
+    str
+      .replace(/[إأآا]/g, "ا")
+      .replace(/ة/g, "ه")
+      .replace(/ى/g, "ي")
+      .replace(/[\u064B-\u065F]/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  const normalizedClean = stripArabic(clean);
+
+  for (const g of DEFAULT_SHIPPING_RATES) {
+    const normEn = g.governorate.toLowerCase().replace(/[–—_]/g, " ").replace(/\s+/g, " ");
+    if (clean === normEn || clean.replace(/[^a-z]/g, "") === normEn.replace(/[^a-z]/g, "")) {
+      return g.id;
+    }
+    const normAr = stripArabic(g.governorate_ar);
+    if (normalizedClean === normAr || normalizedClean.includes(normAr) || normAr.includes(normalizedClean)) {
+      return g.id;
+    }
+  }
+
+  // Common aliases
+  const aliases: Record<string, string> = {
+    "cairo": "cairo",
+    "el qahira": "cairo",
+    "al qahirah": "cairo",
+    "giza": "giza",
+    "el giza": "giza",
+    "alex": "alexandria",
+    "alexandria": "alexandria",
+    "el eskandariya": "alexandria",
+    "port said": "port_said",
+    "portsaid": "port_said",
+    "red sea": "red_sea",
+    "hurghada": "red_sea",
+    "sharm": "south_sinai",
+    "sharm el sheikh": "south_sinai",
+    "south sinai": "south_sinai",
+    "north sinai": "north_sinai",
+    "el arish": "north_sinai",
+    "new valley": "new_valley",
+    "el wadi el gedid": "new_valley",
+    "kafr el sheikh": "kafr_el_sheikh",
+    "kafr elsheikh": "kafr_el_sheikh",
+    "beni suef": "beni_suef",
+    "benisuef": "beni_suef",
+  };
+
+  if (aliases[clean]) return aliases[clean];
+  if (aliases[clean.replace(/\s+/g, "_")]) return aliases[clean.replace(/\s+/g, "_")];
+
+  return null;
+}
+
+function getShippingRatesFromDisk(): any[] {
+  try {
+    if (fs.existsSync(SHIPPING_RATES_FILE)) {
+      const content = fs.readFileSync(SHIPPING_RATES_FILE, "utf-8");
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        // Ensure all 27 default governorates exist
+        let changed = false;
+        for (const def of DEFAULT_SHIPPING_RATES) {
+          if (!parsed.some((p: any) => p.id === def.id)) {
+            parsed.push({
+              ...def,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            });
+            changed = true;
+          }
+        }
+        if (changed) {
+          saveShippingRatesToDisk(parsed);
+        }
+        return parsed;
+      }
+    }
+  } catch (err) {
+    console.error("Error reading shipping-rates-db.json:", err);
+  }
+
+  const initial = DEFAULT_SHIPPING_RATES.map((r) => ({
+    ...r,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }));
+  saveShippingRatesToDisk(initial);
+  return initial;
+}
+
+function saveShippingRatesToDisk(rates: any[]) {
+  try {
+    fs.writeFileSync(SHIPPING_RATES_FILE, JSON.stringify(rates, null, 2), "utf-8");
+  } catch (err) {
+    console.error("Error saving shipping-rates-db.json:", err);
+  }
+}
+
+async function syncShippingRatesWithSupabase() {
+  const supabase = getSupabase();
+  if (!supabase) return;
+  try {
+    const { data, error } = await supabase.from("shipping_rates").select("*");
+    if (!error && Array.isArray(data) && data.length > 0) {
+      const diskRates = getShippingRatesFromDisk();
+      for (const row of data) {
+        const idx = diskRates.findIndex((r) => r.id === row.id);
+        if (idx >= 0) {
+          diskRates[idx] = {
+            ...diskRates[idx],
+            rate: Math.min(90, Math.max(0, Number(row.rate))),
+            is_active: Boolean(row.is_active),
+            updated_at: row.updated_at || diskRates[idx].updated_at
+          };
+        } else {
+          diskRates.push({
+            id: row.id,
+            governorate: row.governorate,
+            governorate_ar: row.governorate_ar || row.governorate,
+            rate: Math.min(90, Math.max(0, Number(row.rate))),
+            is_active: Boolean(row.is_active),
+            created_at: row.created_at || new Date().toISOString(),
+            updated_at: row.updated_at || new Date().toISOString(),
+          });
+        }
+      }
+      saveShippingRatesToDisk(diskRates);
+    } else {
+      const diskRates = getShippingRatesFromDisk();
+      for (const r of diskRates) {
+        await supabase.from("shipping_rates").upsert({
+          id: r.id,
+          governorate: r.governorate,
+          governorate_ar: r.governorate_ar,
+          rate: Math.min(90, Math.max(0, Number(r.rate))),
+          is_active: r.is_active
+        });
+      }
+    }
+  } catch (err) {
+    console.warn("[Shipping Sync] Notice:", err);
   }
 }
 
@@ -1333,9 +1558,38 @@ function mapSupabaseToAppProduct(p: any) {
 }
 
 // API Routes - Config & Health
-app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", supabaseConfigured: isSupabaseConfigured() });
-});
+const handleHealthCheck = async (req: any, res: any) => {
+  const pgConfigured = isPostgresConfigured();
+  if (pgConfigured) {
+    const dbHealth = await checkPostgresHealth();
+    const isHealthy = dbHealth.status === "healthy";
+    const httpStatus = isHealthy ? 200 : 503;
+    return res.status(httpStatus).json({
+      status: isHealthy ? "healthy" : "unhealthy",
+      timestamp: new Date().toISOString(),
+      uptimeSeconds: Math.round(process.uptime()),
+      environment: process.env.NODE_ENV || "production",
+      database: {
+        type: "postgresql_docker",
+        ...dbHealth,
+      },
+    });
+  }
+
+  // Fallback health status
+  return res.json({
+    status: "healthy",
+    timestamp: new Date().toISOString(),
+    uptimeSeconds: Math.round(process.uptime()),
+    database: {
+      type: isSupabaseConfigured() ? "supabase_cloud" : "local_disk",
+      status: "healthy",
+    },
+  });
+};
+
+app.get("/health", handleHealthCheck);
+app.get("/api/health", handleHealthCheck);
 
 app.get("/api/supabase/config", (req, res) => {
   const env = resolveSupabaseEnv();
@@ -2022,6 +2276,36 @@ app.post("/api/upload", (req, res) => {
   }
 });
 
+// VIDEO UPLOAD ENDPOINT (For Auth background and promos)
+app.post("/api/upload-video", (req, res) => {
+  try {
+    const { dataUrl, fileBase64, contentType } = req.body;
+    let base64Data = "";
+
+    if (dataUrl && typeof dataUrl === "string") {
+      const match = dataUrl.match(/^data:video\/[a-zA-Z0-9+]+;base64,(.+)$/);
+      if (match) {
+        base64Data = match[1];
+      }
+    } else if (fileBase64) {
+      base64Data = fileBase64;
+    }
+
+    if (!base64Data) {
+      return res.status(400).json({ error: "No video payload provided" });
+    }
+
+    const buffer = Buffer.from(base64Data, "base64");
+    const targetFile = path.join(UPLOADS_DIR, "auth-bg-video.mp4");
+    fs.writeFileSync(targetFile, buffer);
+    console.log(`[Video Upload] Successfully saved video to ${targetFile} (${(buffer.length / 1024 / 1024).toFixed(2)} MB)`);
+    res.json({ success: true, url: `/uploads/auth-bg-video.mp4?t=${Date.now()}` });
+  } catch (err: any) {
+    console.error("Video upload error:", err);
+    res.status(500).json({ error: err.message || "Failed to save video" });
+  }
+});
+
 // PRODUCTS ENDPOINTS
 app.get("/api/products", async (req, res) => {
   const genderFilter = req.query.gender ? String(req.query.gender).trim() : null;
@@ -2522,10 +2806,68 @@ app.post("/api/orders", async (req: any, res: any) => {
   const fulfillmentStatus: FulfillmentStatus = "unfulfilled";
   const shippingStatus: ShippingStatus = "not_shipped";
 
-  const subtotal = Number(newOrder.subtotal || newOrder.total || 0);
-  const shippingCost = Number(newOrder.shippingFee || newOrder.shippingCost || 0);
-  const discount = Number(newOrder.discount || 0);
-  const total = Number(newOrder.total || (subtotal + shippingCost - discount) || 0);
+  // --- AUTOMATIC SHIPPING-RATE CALCULATION & SECURITY ENFORCEMENT ---
+  // 1. Identify customer's selected Egyptian Governorate
+  const rawGovernorate = String(
+    newOrder.governorate || 
+    newOrder.governorateId || 
+    newOrder.shippingAddress?.governorate || 
+    newOrder.shippingCity || 
+    newOrder.shippingAddress?.city || 
+    ""
+  ).trim();
+
+  const govId = normalizeGovernorateId(rawGovernorate);
+  if (!govId) {
+    return res.status(400).json({ 
+      error: "Unknown governorate", 
+      message: "Please select a valid Egyptian governorate for shipping." 
+    });
+  }
+
+  const shippingRates = getShippingRatesFromDisk();
+  const matchedRate = shippingRates.find((r) => r.id === govId);
+  if (!matchedRate) {
+    return res.status(400).json({ 
+      error: "Unknown governorate", 
+      message: "Unrecognized governorate." 
+    });
+  }
+
+  if (!matchedRate.is_active) {
+    return res.status(400).json({ 
+      error: "Governorate has no active shipping rate", 
+      message: `Shipping is currently unavailable for ${matchedRate.governorate}.` 
+    });
+  }
+
+  const officialShippingCost = Number(matchedRate.rate);
+  if (isNaN(officialShippingCost) || officialShippingCost < 0 || officialShippingCost > 90) {
+    return res.status(400).json({ 
+      error: "Invalid shipping rate", 
+      message: "Configured shipping rate exceeds safety bounds (0 - 90 EGP)." 
+    });
+  }
+
+  // 2. Server-authoritative Subtotal calculation from items if present
+  let computedSubtotal = 0;
+  if (Array.isArray(newOrder.items) && newOrder.items.length > 0) {
+    for (const it of newOrder.items) {
+      const pPrice = Number(it.product?.price || it.unitPrice || it.price || 0);
+      const pQty = Math.max(1, Number(it.quantity || 1));
+      computedSubtotal += pPrice * pQty;
+    }
+  }
+  const subtotal = computedSubtotal > 0 ? computedSubtotal : Number(newOrder.subtotal || 0);
+  const discount = Math.max(0, Number(newOrder.discount || 0));
+
+  // 3. SERVER-AUTHORITATIVE CALCULATION:
+  // - Ignore any shipping price sent by client
+  // - Ignore any final total sent by client
+  // - Official shipping rate from database is the sole source of truth
+  const shippingCost = officialShippingCost;
+  const total = Math.max(0, subtotal - discount + shippingCost);
+  const finalGovernorate = matchedRate.governorate;
 
   const fullOrder = {
     ...newOrder,
@@ -2541,11 +2883,14 @@ app.post("/api/orders", async (req: any, res: any) => {
     status: "Processing",
     subtotal,
     shipping_cost: shippingCost,
+    shippingCost: shippingCost,
+    shippingFee: shippingCost,
     discount,
     total,
     amount_paid: paymentStatus === "paid" ? total : 0,
     amount_refunded: 0,
-    governorate: newOrder.governorate || newOrder.shippingCity || "Cairo",
+    governorate: finalGovernorate,
+    governorate_id: matchedRate.id,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   };
@@ -2564,7 +2909,8 @@ app.post("/api/orders", async (req: any, res: any) => {
         email: userEmail,
         shipping_name: newOrder.shippingName || newOrder.shippingAddress?.fullName || "Valued Client",
         shipping_address: typeof newOrder.shippingAddress === "string" ? newOrder.shippingAddress : (newOrder.shippingAddress?.address || "Cairo"),
-        shipping_city: newOrder.shippingCity || newOrder.shippingAddress?.city || "Cairo",
+        shipping_city: newOrder.shippingCity || newOrder.shippingAddress?.city || finalGovernorate,
+        governorate: finalGovernorate,
         shipping_zip: newOrder.shippingZip || newOrder.shippingAddress?.postalCode || "11511",
         shipping_phone: newOrder.shippingPhone || newOrder.shippingAddress?.phone || null,
         payment_method: paymentMethod,
@@ -2657,6 +3003,114 @@ app.post("/api/orders", async (req: any, res: any) => {
 
   broadcastUpdate();
   res.json(enrichOrderPayload(fullOrder, newOrder.items || []));
+});
+
+// =============================================================================
+// SHIPPING RATES API (OFFICIAL EGYPTIAN GOVERNORATES)
+// =============================================================================
+
+// GET /api/shipping-rates - Retrieve configured shipping rates
+app.get("/api/shipping-rates", (req, res) => {
+  const rates = getShippingRatesFromDisk();
+  if (req.query.active === "true") {
+    return res.json(rates.filter((r) => r.is_active));
+  }
+  return res.json(rates);
+});
+
+// GET /api/shipping-rates/calculate - Calculate shipping rate for a governorate
+app.get("/api/shipping-rates/calculate", (req, res) => {
+  const rawGov = String(req.query.governorate || req.query.gov || "").trim();
+  if (!rawGov) {
+    return res.status(400).json({ error: "Governorate query parameter is required" });
+  }
+
+  const govId = normalizeGovernorateId(rawGov);
+  if (!govId) {
+    return res.status(400).json({ 
+      error: "Unknown governorate", 
+      message: "Unrecognized Egyptian governorate." 
+    });
+  }
+
+  const rates = getShippingRatesFromDisk();
+  const matched = rates.find((r) => r.id === govId);
+  if (!matched) {
+    return res.status(400).json({ error: "Unknown governorate" });
+  }
+
+  if (!matched.is_active) {
+    return res.status(400).json({ 
+      error: "Governorate has no active shipping rate", 
+      message: `Shipping is currently unavailable for ${matched.governorate}.`,
+      governorate: matched.governorate,
+      governorate_ar: matched.governorate_ar,
+      is_active: false
+    });
+  }
+
+  return res.json({
+    id: matched.id,
+    governorate: matched.governorate,
+    governorate_ar: matched.governorate_ar,
+    rate: Number(matched.rate),
+    is_active: true
+  });
+});
+
+// PUT /api/shipping-rates/:id - Admin update shipping rate & status (enforcing max 90 EGP limit)
+app.put("/api/shipping-rates/:id", requireAdmin, async (req: any, res: any) => {
+  const rawId = req.params.id;
+  const govId = normalizeGovernorateId(rawId) || rawId.trim().toLowerCase();
+
+  const rates = getShippingRatesFromDisk();
+  const index = rates.findIndex((r) => r.id === govId);
+  if (index === -1) {
+    return res.status(404).json({ error: "Governorate not found" });
+  }
+
+  const { rate, is_active } = req.body;
+
+  if (rate !== undefined) {
+    const numRate = Number(rate);
+    if (isNaN(numRate)) {
+      return res.status(400).json({ error: "Invalid rate. Rate must be a number." });
+    }
+    if (numRate < 0) {
+      return res.status(400).json({ error: "Shipping rate cannot be negative." });
+    }
+    if (numRate > 90) {
+      return res.status(400).json({ error: "Maximum shipping rate is 90 EGP." });
+    }
+    rates[index].rate = numRate;
+  }
+
+  if (is_active !== undefined) {
+    rates[index].is_active = Boolean(is_active);
+  }
+
+  rates[index].updated_at = new Date().toISOString();
+  saveShippingRatesToDisk(rates);
+
+  // Sync to Supabase if connected
+  const supabase = getSupabase();
+  if (supabase) {
+    try {
+      await supabase.from("shipping_rates").upsert({
+        id: rates[index].id,
+        governorate: rates[index].governorate,
+        governorate_ar: rates[index].governorate_ar,
+        rate: rates[index].rate,
+        is_active: rates[index].is_active,
+        updated_at: rates[index].updated_at
+      });
+    } catch (dbErr) {
+      console.warn("[Shipping API] Supabase upsert error:", dbErr);
+    }
+  }
+
+  broadcastUpdate();
+  return res.json({ success: true, rate: rates[index] });
 });
 
 // 4. UPDATE ORDER INDEPENDENT STATUSES (Payment, Fulfillment, Shipping)
@@ -4754,9 +5208,33 @@ async function initServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
+  // Initialize PostgreSQL database if configured
+  if (isPostgresConfigured()) {
+    console.log("[Express Server] Initializing PostgreSQL database connection & tables...");
+    await initializePostgresDatabase();
+  }
+
+  const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`[Express Server] Server running on http://0.0.0.0:${PORT} (mode: ${isProduction ? "production-static" : "development-vite"})`);
   });
+
+  // Graceful shutdown handling for container termination
+  const shutdown = async (signal: string) => {
+    console.log(`[Express Server] Received ${signal}. Starting graceful shutdown...`);
+    server.close(async () => {
+      console.log("[Express Server] HTTP server closed.");
+      await closePostgresPool();
+      process.exit(0);
+    });
+
+    setTimeout(() => {
+      console.error("[Express Server] Forcing exit after shutdown timeout.");
+      process.exit(1);
+    }, 10000);
+  };
+
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
 }
 
 initServer();

@@ -1,0 +1,245 @@
+[
+  {
+    "id": "cairo",
+    "governorate": "Cairo",
+    "governorate_ar": "القاهرة",
+    "rate": 50,
+    "is_active": true,
+    "created_at": "2026-09-08T01:52:14.173Z",
+    "updated_at": "2026-09-08T01:52:31.714Z"
+  },
+  {
+    "id": "giza",
+    "governorate": "Giza",
+    "governorate_ar": "الجيزة",
+    "rate": 50,
+    "is_active": true,
+    "created_at": "2026-09-08T01:52:14.173Z",
+    "updated_at": "2026-09-08T01:52:14.173Z"
+  },
+  {
+    "id": "qalyubia",
+    "governorate": "Qalyubia",
+    "governorate_ar": "القليوبية",
+    "rate": 60,
+    "is_active": true,
+    "created_at": "2026-09-08T01:52:14.173Z",
+    "updated_at": "2026-09-08T01:52:14.173Z"
+  },
+  {
+    "id": "alexandria",
+    "governorate": "Alexandria",
+    "governorate_ar": "الإسكندرية",
+    "rate": 70,
+    "is_active": true,
+    "created_at": "2026-09-08T01:52:14.173Z",
+    "updated_at": "2026-09-08T01:52:14.173Z"
+  },
+  {
+    "id": "dakahlia",
+    "governorate": "Dakahlia",
+    "governorate_ar": "الدقهلية",
+    "rate": 70,
+    "is_active": true,
+    "created_at": "2026-09-08T01:52:14.173Z",
+    "updated_at": "2026-09-08T01:52:14.173Z"
+  },
+  {
+    "id": "sharqia",
+    "governorate": "Sharqia",
+    "governorate_ar": "الشرقية",
+    "rate": 70,
+    "is_active": true,
+    "created_at": "2026-09-08T01:52:14.173Z",
+    "updated_at": "2026-09-08T01:52:14.173Z"
+  },
+  {
+    "id": "gharbia",
+    "governorate": "Gharbia",
+    "governorate_ar": "الغربية",
+    "rate": 70,
+    "is_active": true,
+    "created_at": "2026-09-08T01:52:14.173Z",
+    "updated_at": "2026-09-08T01:52:14.173Z"
+  },
+  {
+    "id": "monufia",
+    "governorate": "Monufia",
+    "governorate_ar": "المنوفية",
+    "rate": 70,
+    "is_active": true,
+    "created_at": "2026-09-08T01:52:14.173Z",
+    "updated_at": "2026-09-08T01:52:14.173Z"
+  },
+  {
+    "id": "beheira",
+    "governorate": "Beheira",
+    "governorate_ar": "البحيرة",
+    "rate": 75,
+    "is_active": true,
+    "created_at": "2026-09-08T01:52:14.173Z",
+    "updated_at": "2026-09-08T01:52:14.173Z"
+  },
+  {
+    "id": "kafr_el_sheikh",
+    "governorate": "Kafr El Sheikh",
+    "governorate_ar": "كفر الشيخ",
+    "rate": 75,
+    "is_active": true,
+    "created_at": "2026-09-08T01:52:14.173Z",
+    "updated_at": "2026-09-08T01:52:14.173Z"
+  },
+  {
+    "id": "damietta",
+    "governorate": "Damietta",
+    "governorate_ar": "دمياط",
+    "rate": 75,
+    "is_active": true,
+    "created_at": "2026-09-08T01:52:14.173Z",
+    "updated_at": "2026-09-08T01:52:14.173Z"
+  },
+  {
+    "id": "port_said",
+    "governorate": "Port Said",
+    "governorate_ar": "بورسعيد",
+    "rate": 75,
+    "is_active": true,
+    "created_at": "2026-09-08T01:52:14.173Z",
+    "updated_at": "2026-09-08T01:52:14.173Z"
+  },
+  {
+    "id": "ismailia",
+    "governorate": "Ismailia",
+    "governorate_ar": "الإسماعيلية",
+    "rate": 75,
+    "is_active": true,
+    "created_at": "2026-09-08T01:52:14.173Z",
+    "updated_at": "2026-09-08T01:52:14.173Z"
+  },
+  {
+    "id": "suez",
+    "governorate": "Suez",
+    "governorate_ar": "السويس",
+    "rate": 75,
+    "is_active": true,
+    "created_at": "2026-09-08T01:52:14.173Z",
+    "updated_at": "2026-09-08T01:52:14.173Z"
+  },
+  {
+    "id": "fayoum",
+    "governorate": "Fayoum",
+    "governorate_ar": "الفيوم",
+    "rate": 80,
+    "is_active": true,
+    "created_at": "2026-09-08T01:52:14.173Z",
+    "updated_at": "2026-09-08T01:52:14.173Z"
+  },
+  {
+    "id": "beni_suef",
+    "governorate": "Beni Suef",
+    "governorate_ar": "بني سويف",
+    "rate": 80,
+    "is_active": true,
+    "created_at": "2026-09-08T01:52:14.173Z",
+    "updated_at": "2026-09-08T01:52:14.173Z"
+  },
+  {
+    "id": "minya",
+    "governorate": "Minya",
+    "governorate_ar": "المنيا",
+    "rate": 90,
+    "is_active": true,
+    "created_at": "2026-09-08T01:52:14.173Z",
+    "updated_at": "2026-09-08T01:52:14.173Z"
+  },
+  {
+    "id": "assiut",
+    "governorate": "Assiut",
+    "governorate_ar": "أسيوط",
+    "rate": 90,
+    "is_active": true,
+    "created_at": "2026-09-08T01:52:14.173Z",
+    "updated_at": "2026-09-08T01:52:14.173Z"
+  },
+  {
+    "id": "sohag",
+    "governorate": "Sohag",
+    "governorate_ar": "سوهاج",
+    "rate": 90,
+    "is_active": true,
+    "created_at": "2026-09-08T01:52:14.173Z",
+    "updated_at": "2026-09-08T01:52:14.173Z"
+  },
+  {
+    "id": "qena",
+    "governorate": "Qena",
+    "governorate_ar": "قنا",
+    "rate": 90,
+    "is_active": true,
+    "created_at": "2026-09-08T01:52:14.173Z",
+    "updated_at": "2026-09-08T01:52:14.173Z"
+  },
+  {
+    "id": "luxor",
+    "governorate": "Luxor",
+    "governorate_ar": "الأقصر",
+    "rate": 90,
+    "is_active": true,
+    "created_at": "2026-09-08T01:52:14.173Z",
+    "updated_at": "2026-09-08T01:52:14.173Z"
+  },
+  {
+    "id": "aswan",
+    "governorate": "Aswan",
+    "governorate_ar": "أسوان",
+    "rate": 90,
+    "is_active": true,
+    "created_at": "2026-09-08T01:52:14.173Z",
+    "updated_at": "2026-09-08T01:52:14.173Z"
+  },
+  {
+    "id": "red_sea",
+    "governorate": "Red Sea",
+    "governorate_ar": "البحر الأحمر",
+    "rate": 90,
+    "is_active": true,
+    "created_at": "2026-09-08T01:52:14.173Z",
+    "updated_at": "2026-09-08T01:52:14.173Z"
+  },
+  {
+    "id": "new_valley",
+    "governorate": "New Valley",
+    "governorate_ar": "الوادي الجديد",
+    "rate": 90,
+    "is_active": true,
+    "created_at": "2026-09-08T01:52:14.173Z",
+    "updated_at": "2026-09-08T01:52:14.173Z"
+  },
+  {
+    "id": "north_sinai",
+    "governorate": "North Sinai",
+    "governorate_ar": "شمال سيناء",
+    "rate": 90,
+    "is_active": true,
+    "created_at": "2026-09-08T01:52:14.173Z",
+    "updated_at": "2026-09-08T01:52:14.173Z"
+  },
+  {
+    "id": "south_sinai",
+    "governorate": "South Sinai",
+    "governorate_ar": "جنوب سيناء",
+    "rate": 90,
+    "is_active": true,
+    "created_at": "2026-09-08T01:52:14.173Z",
+    "updated_at": "2026-09-08T01:52:14.173Z"
+  },
+  {
+    "id": "matrouh",
+    "governorate": "Matrouh",
+    "governorate_ar": "مطروح",
+    "rate": 90,
+    "is_active": true,
+    "created_at": "2026-09-08T01:52:14.173Z",
+    "updated_at": "2026-09-08T01:52:14.173Z"
+  }
+]

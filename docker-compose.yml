@@ -1,0 +1,140 @@
+# ==============================================================================
+# VERO LUXURY ACCESSORIES - PRODUCTION DOCKER COMPOSE
+# Production-ready orchestration with isolated network, persistent storage,
+# automated SSL management, and PostgreSQL database containerization.
+# ==============================================================================
+
+version: "3.8"
+
+services:
+  # ----------------------------------------------------------------------------
+  # 1. PostgreSQL Database Service
+  # ----------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: vero-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-vero_db}
+      POSTGRES_USER: ${POSTGRES_USER:-vero_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Database password must be set in .env}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      # Persistent database storage
+      - postgres_data:/var/lib/postgresql/data
+      # Initial database DDL and seeding on first container boot
+      - ./init-db:/docker-entrypoint-initdb.d:ro
+    networks:
+      - vero-network
+    # IMPORTANT: Port 5432 is NEVER exposed to the public internet for security.
+    # It is strictly reachable internally by the vero-app container.
+    expose:
+      - "5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vero_user} -d ${POSTGRES_DB:-vero_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+
+  # ----------------------------------------------------------------------------
+  # 2. VERO Node.js Full-Stack Application
+  # ----------------------------------------------------------------------------
+  vero-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vero-accessories:latest
+    container_name: vero-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # Database connection using the Docker Compose service hostname 'postgres'
+      DATABASE_URL: postgresql://${POSTGRES_USER:-vero_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-vero_db}
+      APP_URL: ${APP_URL:-https://vero-accessoires.store}
+      SESSION_SECRET: ${SESSION_SECRET:-vero-prod-session-secret-change-in-env}
+      DB_POOL_MAX: 20
+      DB_CONNECT_TIMEOUT: 5000
+      DB_IDLE_TIMEOUT: 30000
+    volumes:
+      # Persistent storage for uploaded product images
+      - vero_uploads:/app/public/uploads
+    networks:
+      - vero-network
+    # Bound to local loopback so host Nginx can reach it if running without containerized Nginx,
+    # while containerized Nginx reaches it over the internal vero-network.
+    ports:
+      - "127.0.0.1:3000:3000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+
+  # ----------------------------------------------------------------------------
+  # 3. Nginx Reverse Proxy & SSL Termination
+  # ----------------------------------------------------------------------------
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: vero-nginx
+    restart: unless-stopped
+    depends_on:
+      vero-app:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+      - vero_uploads:/var/www/uploads:ro
+    networks:
+      - vero-network
+
+  # ----------------------------------------------------------------------------
+  # 4. Certbot SSL Automated Renewer
+  # ----------------------------------------------------------------------------
+  certbot:
+    image: certbot/certbot:latest
+    container_name: vero-certbot
+    restart: unless-stopped
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    networks:
+      - vero-network
+
+# ------------------------------------------------------------------------------
+# Persistent Docker Volumes
+# ------------------------------------------------------------------------------
+volumes:
+  postgres_data:
+    name: vero_postgres_data
+    driver: local
+  vero_uploads:
+    name: vero_uploads_data
+    driver: local
+
+# ------------------------------------------------------------------------------
+# Isolated Bridge Network
+# ------------------------------------------------------------------------------
+networks:
+  vero-network:
+    name: vero-network
+    driver: bridge
