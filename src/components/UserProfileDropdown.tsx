@@ -176,7 +176,7 @@ export default function UserProfileDropdown({
       {/* Dropdown Container */}
       <div
         id="user-dropdown-container"
-        className="absolute right-0 mt-3 w-[350px] md:w-[420px] rounded-2xl bg-[#fff8f3] border border-[#c5a880]/30 shadow-[0_12px_40px_rgba(21,16,10,0.12)] p-5 text-brand-dark z-50 text-left"
+        className="absolute -right-2 sm:right-0 mt-3 w-[calc(100vw-20px)] max-w-[400px] rounded-2xl bg-[#fff8f3] border border-[#c5a880]/30 shadow-[0_12px_40px_rgba(21,16,10,0.12)] p-4 sm:p-5 text-brand-dark z-50 text-left"
       >
         <div className="flex justify-between items-center pb-3 border-b border-[#c5a880]/15">
           <div className="flex items-center gap-1">

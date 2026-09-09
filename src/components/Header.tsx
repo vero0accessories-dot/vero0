@@ -23,6 +23,7 @@ interface HeaderProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   cartCount: number;
+  favoritesCount?: number;
   openSearch: () => void;
   user: UserProfile | null;
   onOpenAuth: () => void;
@@ -40,6 +41,7 @@ export default function Header({
   activeTab,
   setActiveTab,
   cartCount,
+  favoritesCount,
   openSearch,
   user,
   onOpenAuth,
@@ -174,55 +176,46 @@ export default function Header({
           </p>
         </div>
 
-        {/* 2. MAIN NAVBAR ROW (Middle: Logo, Left: Menu/Search, Right: Icons) */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 h-14 md:h-16 flex items-center justify-between relative">
-          {/* Left Area: Mobile Hamburger & Desktop Search */}
-          <div className="flex items-center gap-3 md:gap-4 w-1/3 justify-start">
+        {/* 2. MAIN NAVBAR ROW (3-Column Grid: Left, Center, Right - Zero overlap guarantee) */}
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-10 h-14 sm:h-16 grid grid-cols-[1fr_auto_1fr] items-center relative">
+          {/* Left Column: Mobile Hamburger & Search */}
+          <div className="flex items-center justify-start gap-1 sm:gap-2.5 min-w-0">
             {/* Mobile Hamburger Button */}
             <button
               onClick={() => setMobileMenuOpen(true)}
-              className="lg:hidden text-neutral-900 p-1 hover:opacity-60 transition-opacity active:scale-95 duration-150 focus:outline-none"
+              className="lg:hidden text-neutral-900 p-1.5 -ml-1 rounded-full hover:bg-neutral-100 hover:opacity-75 transition-all active:scale-95 duration-150 focus:outline-none shrink-0"
               aria-label="Open Menu"
             >
               <Menu className="w-5 h-5 stroke-[1.25]" />
             </button>
 
-            {/* Desktop Search Icon Button */}
+            {/* Search Icon Button (Accessible on both Mobile & Desktop) */}
             <button
               onClick={openSearch}
-              className="hidden lg:flex items-center gap-2 text-neutral-800 hover:text-black hover:opacity-70 transition-all font-normal text-xs uppercase tracking-[0.15em] focus:outline-none py-1"
+              className="flex items-center gap-1.5 text-neutral-800 hover:text-black hover:opacity-75 transition-all text-xs uppercase tracking-[0.15em] focus:outline-none p-1.5 rounded-full hover:bg-neutral-100 shrink-0"
               aria-label="Search"
             >
-              <Search className="w-4 h-4 stroke-[1.25]" />
-              <span className="text-[11px] font-light hidden xl:inline tracking-[0.18em]">Search</span>
+              <Search className="w-4 h-4 sm:w-4 sm:h-4 stroke-[1.25]" />
+              <span className="text-[11px] font-light hidden lg:inline tracking-[0.18em]">Search</span>
             </button>
           </div>
 
-          {/* Center Area: Centered VERO Logo */}
-          <div className="w-1/3 flex justify-center text-center">
+          {/* Center Column: Centered VERO Logo (Physically bounded in its own column) */}
+          <div className="flex items-center justify-center text-center px-1 min-w-0">
             <button
               onClick={() => setActiveTab("home")}
-              className="font-serif text-2xl md:text-3xl lg:text-4xl tracking-[0.25em] text-neutral-950 hover:opacity-80 transition-opacity uppercase font-medium focus:outline-none"
+              className="font-serif text-xl sm:text-2xl md:text-3xl lg:text-4xl tracking-[0.18em] sm:tracking-[0.25em] text-neutral-950 hover:opacity-80 transition-opacity uppercase font-medium focus:outline-none whitespace-nowrap"
             >
               VERO
             </button>
           </div>
 
-          {/* Right Area: Icons (Search on mobile, Heart, User, Bag) */}
-          <div className="flex items-center justify-end gap-3.5 sm:gap-5 md:gap-6 w-1/3">
-            {/* Mobile Search Icon */}
-            <button
-              onClick={openSearch}
-              className="lg:hidden text-neutral-900 hover:opacity-60 transition-opacity p-1 focus:outline-none"
-              aria-label="Search"
-            >
-              <Search className="w-4 h-4 stroke-[1.25]" />
-            </button>
-
-            {/* Wishlist / Favorites */}
+          {/* Right Column: Luxury Action Icons (Spacing calibrated with shrink-0) */}
+          <div className="flex items-center justify-end gap-1 sm:gap-2.5 md:gap-4 min-w-0">
+            {/* Wishlist / Favorites (Hidden on mobile header; available on desktop and in mobile menu drawer) */}
             <button
               onClick={() => setActiveTab("favorites")}
-              className={`text-neutral-900 hover:opacity-60 transition-opacity relative p-1 focus:outline-none ${
+              className={`hidden sm:inline-flex items-center justify-center text-neutral-900 hover:opacity-60 transition-opacity relative p-1.5 rounded-full hover:bg-neutral-100 focus:outline-none shrink-0 ${
                 activeTab === "favorites" ? "opacity-100 font-semibold" : "opacity-90"
               }`}
               aria-label="Favorites"
@@ -231,7 +224,7 @@ export default function Header({
             </button>
 
             {/* Notification Bell */}
-            <div className="opacity-90 hover:opacity-100 transition-opacity">
+            <div className="shrink-0 flex items-center">
               <NotificationBell 
                 user={user} 
                 onOpenOrder={onTrackOrder} 
@@ -240,18 +233,18 @@ export default function Header({
             </div>
 
             {/* User Account / Profile */}
-            <div className="relative">
+            <div className="relative shrink-0 flex items-center">
               {user ? (
                 <button
                   id="header-user-profile-btn"
                   onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="flex items-center gap-1.5 hover:opacity-80 transition-opacity active:scale-95 duration-150 focus:outline-none p-1"
+                  className="flex items-center gap-1 hover:opacity-80 transition-opacity active:scale-95 duration-150 focus:outline-none p-0.5 rounded-full"
                   aria-label="User Profile"
                 >
                   <UserAvatar
                     name={user.name}
                     avatar={user.avatar}
-                    className="w-6 h-6 md:w-7 md:h-7 ring-1 ring-neutral-200"
+                    className="w-6 h-6 sm:w-7 sm:h-7 ring-1 ring-neutral-200"
                     tier={user.tier}
                   />
                   <span className="hidden xl:inline text-[10px] tracking-[0.18em] font-normal text-neutral-900 uppercase truncate max-w-[70px]">
@@ -262,7 +255,7 @@ export default function Header({
                 <button
                   id="header-user-login-btn"
                   onClick={onOpenAuth}
-                  className="text-neutral-900 hover:opacity-60 transition-opacity p-1 focus:outline-none active:scale-95 duration-150"
+                  className="text-neutral-900 hover:opacity-60 transition-opacity p-1.5 rounded-full hover:bg-neutral-100 focus:outline-none active:scale-95 duration-150"
                   aria-label="Account Login"
                 >
                   <User className="w-4 h-4 md:w-5 md:h-5 stroke-[1.25]" />
@@ -284,12 +277,12 @@ export default function Header({
             {/* Shopping Bag / Cart Icon */}
             <button
               onClick={() => setActiveTab("bag")}
-              className="text-neutral-900 hover:opacity-60 transition-opacity relative p-1 focus:outline-none active:scale-95 duration-150"
+              className="text-neutral-900 hover:opacity-60 transition-opacity relative p-1.5 rounded-full hover:bg-neutral-100 focus:outline-none active:scale-95 duration-150 shrink-0"
               aria-label="Shopping Bag"
             >
               <ShoppingBag className="w-4 h-4 md:w-5 md:h-5 stroke-[1.25]" />
               {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1.5 min-w-[15px] h-[15px] px-1 bg-black text-white text-[9px] font-semibold flex items-center justify-center rounded-full leading-none">
+                <span className="absolute top-0 -right-0.5 min-w-[15px] h-[15px] px-1 bg-black text-white text-[9px] font-semibold flex items-center justify-center rounded-full leading-none shadow-xs">
                   {cartCount}
                 </span>
               )}
@@ -437,6 +430,19 @@ export default function Header({
                       </button>
                     );
                   })}
+
+                  {/* Favorites in Mobile Drawer (Text-only matching menu styling) */}
+                  <button
+                    onClick={() => handleNavClick("favorites")}
+                    className={`w-full flex items-center justify-between px-6 py-4 text-left transition-colors hover:bg-neutral-50 active:bg-neutral-100 ${
+                      activeTab === "favorites" ? "bg-neutral-100/80 font-medium" : ""
+                    }`}
+                  >
+                    <span className={`text-[15px] tracking-[0.08em] ${activeTab === "favorites" ? "font-semibold text-black" : "text-neutral-900 font-normal"}`}>
+                      FAVORITES
+                    </span>
+                    <ArrowRight className="w-4 h-4 text-neutral-800 stroke-[1.25]" />
+                  </button>
 
                   {/* Special Member Tiers & Admin if applicable */}
                   {(user?.tier === "Platinum" || user?.tier === "Diamond") && (

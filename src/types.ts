@@ -500,6 +500,20 @@ export interface Order {
 }
 
 // ==========================================
+// SHIPPING RATES TYPES
+// ==========================================
+
+export interface ShippingRate {
+  id: string; // Canonical identifier e.g. "cairo", "alexandria"
+  governorate: string; // English name
+  governorate_ar: string; // Arabic name
+  rate: number; // In EGP, strictly >= 0 and <= 90
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// ==========================================
 // INVENTORY SYSTEM TYPES
 // ==========================================
 

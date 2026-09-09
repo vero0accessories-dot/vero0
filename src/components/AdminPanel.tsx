@@ -45,6 +45,7 @@ import {
   Calendar,
   Clock,
   UserCheck,
+  Truck,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Product, ProductGender, Order, Reward, Promo, Review, UserProfile } from "../types";
@@ -56,6 +57,7 @@ import OrdersManager from "./OrdersManager";
 import InventoryManager from "./InventoryManager";
 import PriceDisplay from "./PriceDisplay";
 import AdminProductForm from "./AdminProductForm";
+import { AdminShippingRates } from "./AdminShippingRates";
 import { uploadImageToServer } from "../utils/imageOptimizer";
 
 interface AdminPanelProps {
@@ -116,7 +118,7 @@ export default function AdminPanel({
   initialGender,
 }: AdminPanelProps) {
   const [activeSubTab, setActiveSubTab] = React.useState<
-    "catalog" | "add" | "analytics" | "system" | "orders" | "rewards" | "promos" | "loyalty" | "users" | "reviews" | "auditLogs"
+    "catalog" | "add" | "analytics" | "system" | "orders" | "shipping" | "rewards" | "promos" | "loyalty" | "users" | "reviews" | "auditLogs"
   >("orders");
   const [searchQuery, setSearchQuery] = React.useState("");
   const [catalogGenderFilter, setCatalogGenderFilter] = React.useState<"all" | "Men" | "Women" | "Unisex">("all");
@@ -844,6 +846,27 @@ export default function AdminPanel({
               </span>
             </button>
 
+            {/* Shipping Rates */}
+            <button
+              onClick={() => {
+                setActiveSubTab("shipping");
+                setEditingProduct(null);
+              }}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                activeSubTab === "shipping"
+                  ? "bg-[#1c1917] text-white shadow-sm font-semibold"
+                  : "text-stone-700 hover:bg-stone-100/80 hover:text-stone-900"
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Truck className="w-4 h-4" />
+                <span>Shipping Rates</span>
+              </div>
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 font-bold border border-amber-200">
+                27 Govs
+              </span>
+            </button>
+
             {/* Product Catalog */}
             <button
               onClick={() => {
@@ -1242,6 +1265,7 @@ export default function AdminPanel({
           <div className="bg-white border border-stone-200/90 rounded-2xl p-2.5 shadow-xs flex items-center gap-1.5 overflow-x-auto scrollbar-none animate-fadeIn">
             {[
               { id: "orders", label: "Orders", icon: LayoutDashboard, badge: orders.length },
+              { id: "shipping", label: "Shipping Rates", icon: Truck, badgeText: "27 Govs", highlight: true },
               { id: "analytics", label: "Analytics", icon: TrendingUp, statusDot: true, highlight: true },
               { id: "catalog", label: "Product Catalog", icon: Package, badge: products.length },
               { id: "add", label: "Add Product", icon: PlusCircle },
@@ -1336,6 +1360,13 @@ export default function AdminPanel({
             getAuthHeaders={getAuthHeaders}
             currentUser={currentUser}
             onRefreshOrders={onResetDatabase}
+          />
+        )}
+
+        {activeSubTab === "shipping" && (
+          <AdminShippingRates
+            getAuthHeaders={getAuthHeaders}
+            onShowNotification={triggerNotification}
           />
         )}
 

@@ -1,6 +1,7 @@
 import React from "react";
-import { X, Lock, Check, Gift, ShoppingBag, CreditCard, Sparkles, Mail, User, MapPin } from "lucide-react";
-import { CartItem, UserProfile, getTierFromSpent } from "../types";
+import { X, Lock, Check, Gift, ShoppingBag, CreditCard, Sparkles, Mail, User, MapPin, Truck, AlertCircle } from "lucide-react";
+import { CartItem, UserProfile, getTierFromSpent, ShippingRate } from "../types";
+import { DEFAULT_SHIPPING_RATES } from "../data/egyptianGovernorates";
 import { motion, AnimatePresence } from "motion/react";
 import { analyticsTracker } from "../services/analyticsTracker";
 
@@ -117,13 +118,53 @@ export default function CheckoutFlow({
   const [usedPointsAmount, setUsedPointsAmount] = React.useState(0);
   const [pointsDiscountAmount, setPointsDiscountAmount] = React.useState(0);
 
+  // Automatic Egyptian Shipping Rates State
+  const [shippingRates, setShippingRates] = React.useState<ShippingRate[]>(DEFAULT_SHIPPING_RATES);
+  const [selectedGovId, setSelectedGovId] = React.useState<string>("cairo");
+  const [govError, setGovError] = React.useState<string>("");
+
+  React.useEffect(() => {
+    let isMounted = true;
+    async function loadRates() {
+      try {
+        const res = await fetch("/api/shipping-rates");
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted && Array.isArray(data) && data.length > 0) {
+            setShippingRates(data);
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to fetch shipping rates, fallback to canonical defaults:", err);
+      }
+    }
+    loadRates();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const selectedGov = React.useMemo(() => {
+    return shippingRates.find((r) => r.id === selectedGovId) || shippingRates[0] || DEFAULT_SHIPPING_RATES[0];
+  }, [shippingRates, selectedGovId]);
+
+  // Free shipping threshold: 2000 EGP
+  const FREE_SHIPPING_THRESHOLD = 2000;
+  const isFreeShipping = subtotal >= FREE_SHIPPING_THRESHOLD;
+  const baseDeliveryFee = selectedGov && selectedGov.is_active ? Number(selectedGov.rate) : 0;
+  const activeDeliveryFee = isFreeShipping ? 0 : baseDeliveryFee;
+  const currentTotal = Math.max(0, subtotal - discount + activeDeliveryFee);
+
   const getWhatsAppLink = (orderNumToUse?: string) => {
-    const phone = "201559907692"; // Updated store WhatsApp phone number
+    const phone = "201559907692"; // Store WhatsApp phone number
     const orderNum = orderNumToUse || generatedOrderNumber || "VR-TEMP";
-    const discountVal = selectedPointsTier ? Math.round(total * (selectedPointsTier.percentage / 100)) : 0;
-    const finalPayable = Math.max(0, total - discountVal);
+    const discountVal = selectedPointsTier ? Math.round(currentTotal * (selectedPointsTier.percentage / 100)) : 0;
+    const finalPayable = Math.max(0, currentTotal - discountVal);
     const itemsList = cartItems.map(item => `- ${item.product.name} (${item.selectedSize || "One Size"} / ${item.selectedMaterial || "Platinum"}) x${item.quantity} - EGP ${(item.product.price * item.quantity).toLocaleString()}`).join("\n");
-    const message = `أود تأكيد طلبي الجديد:\n\nرقم الطلب: ${orderNum}\nالاسم: ${shippingName}\nالبريد الإلكتروني: ${shippingEmail}\nالهاتف: ${shippingPhone}\nالعنوان: ${shippingAddress}، ${shippingCity}، ${shippingZip}\n\nالمنتجات:\n${itemsList}\n\nإجمالي المبلغ المطلوب: EGP ${finalPayable.toLocaleString()}`;
+    const shippingText = isFreeShipping
+      ? `مجاني / 0 EGP (عرض الشحن المجاني للطلبات من 2000 ج.م)`
+      : `EGP ${activeDeliveryFee.toLocaleString()}`;
+    const message = `أود تأكيد طلبي الجديد من فيرو:\n\nرقم الطلب: ${orderNum}\nالاسم: ${shippingName}\nالبريد الإلكتروني: ${shippingEmail}\nالهاتف: ${shippingPhone}\nالمحافظة: ${selectedGov.governorate} (${selectedGov.governorate_ar})\nالمدينة/المنطقة: ${shippingCity}\nالعنوان: ${shippingAddress}${shippingZip ? `، رمز بريدي: ${shippingZip}` : ""}\n\nالمنتجات:\n${itemsList}\n\nتكلفة الشحن (${selectedGov.governorate}): ${shippingText}\nإجمالي المبلغ المطلوب: EGP ${finalPayable.toLocaleString()}`;
     return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
   };
 
@@ -147,11 +188,11 @@ export default function CheckoutFlow({
     window.open(whatsappUrl, "_blank");
 
     const redeemed = selectedPointsTier ? selectedPointsTier.points : 0;
-    const discountVal = selectedPointsTier ? Math.round(total * (selectedPointsTier.percentage / 100)) : 0;
+    const discountVal = selectedPointsTier ? Math.round(currentTotal * (selectedPointsTier.percentage / 100)) : 0;
     setUsedPointsAmount(redeemed);
     setPointsDiscountAmount(discountVal);
 
-    const finalPayable = Math.max(0, total - discountVal);
+    const finalPayable = Math.max(0, currentTotal - discountVal);
 
     let multiplier = 1.0;
     let boostPct = 0;
@@ -215,16 +256,19 @@ export default function CheckoutFlow({
       itemsCount: cartItems.length,
       itemName: cartItems[0]?.product.name || "Boutique Order",
       email: shippingEmail.toLowerCase(),
-      shippingPhone
+      shippingPhone,
+      governorate: selectedGov.governorate,
+      shippingCost: activeDeliveryFee,
     };
 
     const fullOrderDetails = {
       orderNumber: orderNum,
       date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" }),
       createdAt: new Date().toISOString(),
-      subtotal: total,
-      shippingFee: deliveryFee,
-      discount: discountVal,
+      subtotal,
+      shippingFee: activeDeliveryFee,
+      shippingCost: activeDeliveryFee,
+      discount: discount + discountVal,
       total: finalPayable,
       earnedPoints: finalEarnedPts,
       redeemedPoints: redeemed,
@@ -234,7 +278,10 @@ export default function CheckoutFlow({
       shippingEmail: shippingEmail.toLowerCase(),
       shippingPhone,
       shippingAddress,
-      shippingCity,
+      shippingCity: shippingCity || selectedGov.governorate,
+      governorate: selectedGov.governorate,
+      governorate_ar: selectedGov.governorate_ar,
+      governorateId: selectedGov.id,
       shippingZip,
       items: cartItems.map((item) => ({
         product: {
@@ -315,7 +362,7 @@ export default function CheckoutFlow({
     const availableTiers = POINTS_DISCOUNT_TIERS.map(tier => ({
       ...tier,
       canAfford: currentPoints >= tier.points,
-      discountAmount: Math.round(total * (tier.percentage / 100)),
+      discountAmount: Math.round(currentTotal * (tier.percentage / 100)),
     }));
 
     const eligible = currentPoints >= 500;
@@ -326,7 +373,7 @@ export default function CheckoutFlow({
       availableTiers,
       reason: !eligible ? "لا يمكن استخدام النقاط إلا بعد وصول الرصيد إلى 500 نقطة للحصول على خصم بنسبة مئوية. / Loyalty points cannot be used until your balance reaches 500 PTS for a percentage discount." : ""
     };
-  }, [user, total]);
+  }, [user, currentTotal]);
 
   // Pre-fill user details if logged in
   React.useEffect(() => {
@@ -341,6 +388,10 @@ export default function CheckoutFlow({
   const handleShippingSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!validatePhone()) {
+      return;
+    }
+    if (!selectedGov || !selectedGov.is_active) {
+      setGovError(`التوصيل غير متاح حالياً لمحافظة ${selectedGov?.governorate_ar || ""} (${selectedGov?.governorate || ""}). برجاء اختيار محافظة أخرى.`);
       return;
     }
     if (!generatedOrderNumber) {
@@ -363,11 +414,11 @@ export default function CheckoutFlow({
 
     // Save used points and discount values for UI
     const redeemed = selectedPointsTier ? selectedPointsTier.points : 0;
-    const discountVal = selectedPointsTier ? Math.round(total * (selectedPointsTier.percentage / 100)) : 0;
+    const discountVal = selectedPointsTier ? Math.round(currentTotal * (selectedPointsTier.percentage / 100)) : 0;
     setUsedPointsAmount(redeemed);
     setPointsDiscountAmount(discountVal);
 
-    const finalPayable = Math.max(0, total - discountVal);
+    const finalPayable = Math.max(0, currentTotal - discountVal);
 
     // Calculate multiplier based on tier according to user request
     let multiplier = 1.0;
@@ -434,16 +485,19 @@ export default function CheckoutFlow({
       itemsCount: cartItems.length,
       itemName: cartItems[0]?.product.name || "Boutique Order",
       email: shippingEmail.toLowerCase(),
-      shippingPhone
+      shippingPhone,
+      governorate: selectedGov.governorate,
+      shippingCost: activeDeliveryFee,
     };
 
     const fullOrderDetails = {
       orderNumber: orderNum,
       date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" }),
       createdAt: new Date().toISOString(),
-      subtotal: total,
-      shippingFee: deliveryFee,
-      discount: discountVal,
+      subtotal,
+      shippingFee: activeDeliveryFee,
+      shippingCost: activeDeliveryFee,
+      discount: discount + discountVal,
       total: finalPayable,
       earnedPoints: finalEarnedPts,
       redeemedPoints: redeemed,
@@ -453,7 +507,10 @@ export default function CheckoutFlow({
       shippingEmail: shippingEmail.toLowerCase(),
       shippingPhone,
       shippingAddress,
-      shippingCity,
+      shippingCity: shippingCity || selectedGov.governorate,
+      governorate: selectedGov.governorate,
+      governorate_ar: selectedGov.governorate_ar,
+      governorateId: selectedGov.id,
       shippingZip,
       items: cartItems.map((item) => ({
         product: {
@@ -693,30 +750,120 @@ export default function CheckoutFlow({
                     />
                   </div>
 
+                  {/* Egyptian Governorate Selector */}
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[10px] font-semibold text-brand-outline uppercase tracking-wider block flex items-center gap-1.5">
+                        <Truck className="w-3.5 h-3.5 text-brand-gold" />
+                        <span>Egyptian Governorate / المحافظة</span>
+                        <span className="text-rose-500">*</span>
+                      </label>
+                      <span className={`text-[10px] font-mono px-2 py-0.5 rounded border font-bold ${
+                        selectedGov?.is_active
+                          ? "bg-amber-50 text-amber-900 border-amber-200"
+                          : "bg-rose-50 text-rose-700 border-rose-200"
+                      }`}>
+                        {selectedGov?.is_active ? `EGP ${activeDeliveryFee}` : "Unavailable"}
+                      </span>
+                    </div>
+
+                    <div className="relative">
+                      <select
+                        value={selectedGovId}
+                        onChange={(e) => {
+                          setSelectedGovId(e.target.value);
+                          setGovError("");
+                        }}
+                        className="w-full bg-stone-50/70 border border-brand-outline-variant/30 focus:border-brand-gold outline-none py-2.5 px-3 text-xs font-medium text-brand-umber rounded-sm transition-all cursor-pointer appearance-none"
+                      >
+                        {shippingRates.map((g) => (
+                          <option key={g.id} value={g.id} disabled={!g.is_active}>
+                            {g.governorate} — {g.governorate_ar} {g.is_active ? `(EGP ${g.rate})` : "(غير متاح حالياً)"}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-brand-outline text-xs">
+                        ▼
+                      </div>
+                    </div>
+
+                    {/* Dynamic Shipping Rate Confirmation Card */}
+                    {selectedGov && selectedGov.is_active ? (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between px-3 py-2 bg-amber-50/70 border border-amber-200/60 rounded-sm text-[11px]">
+                          <div className="flex items-center gap-1.5">
+                            <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span className="text-stone-800 font-medium">
+                              توصيل لمحافظة {selectedGov.governorate_ar} ({selectedGov.governorate})
+                            </span>
+                          </div>
+                          {isFreeShipping ? (
+                            <div className="flex items-center gap-1.5 font-mono">
+                              <span className="line-through text-neutral-400 text-[10px]">
+                                EGP {baseDeliveryFee}
+                              </span>
+                              <span className="font-bold text-emerald-700 bg-emerald-100/90 px-2 py-0.5 rounded text-[10px] tracking-wide">
+                                مجاني (FREE)
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="font-mono font-bold text-amber-950">
+                              EGP {activeDeliveryFee}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Free delivery prompt / celebration */}
+                        {isFreeShipping ? (
+                          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200/60 rounded-sm text-[10.5px] text-emerald-800">
+                            <Sparkles className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span>
+                              تهانينا! طلبك تجاوز 2000 ج.م ومؤهل لـ <strong>الشحن المجاني</strong>.
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-surface-low border border-brand-outline-variant/30 rounded-sm text-[10px] text-brand-gold">
+                            <Truck className="w-3.5 h-3.5 text-brand-gold shrink-0" />
+                            <span>
+                              أضف منتجات بقيمة <strong>EGP {(FREE_SHIPPING_THRESHOLD - subtotal).toLocaleString()}</strong> إضافية للحصول على <strong>شحن مجاني</strong>!
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 px-3 py-2 bg-rose-50 border border-rose-200 rounded-sm text-[11px] text-rose-700">
+                        <AlertCircle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                        <span>الشحن غير متاح حالياً لمحافظة {selectedGov?.governorate_ar || selectedGov?.governorate}.</span>
+                      </div>
+                    )}
+                    {govError && (
+                      <p className="text-[11px] text-rose-600 font-medium">{govError}</p>
+                    )}
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <label className="text-[10px] font-semibold text-brand-outline uppercase tracking-wider block">
-                        City
+                        City / District / المنطقة <span className="text-rose-500">*</span>
                       </label>
                       <input
                         type="text"
                         required
                         value={shippingCity}
                         onChange={(e) => setShippingCity(e.target.value)}
-                        placeholder="E.g. Milan"
+                        placeholder="E.g. New Cairo / التجمع الخامس"
                         className="w-full bg-transparent border-b border-brand-outline-variant focus:border-brand-gold outline-none py-2 text-xs font-light"
                       />
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-semibold text-brand-outline uppercase tracking-wider block">
-                        Postal Code
+                        Postal Code / الرمز البريدي
                       </label>
                       <input
                         type="text"
-                        required
                         value={shippingZip}
                         onChange={(e) => setShippingZip(e.target.value)}
-                        placeholder="E.g. 20121"
+                        placeholder="E.g. 11835"
                         className="w-full bg-transparent border-b border-brand-outline-variant focus:border-brand-gold outline-none py-2 text-xs font-light"
                       />
                     </div>
@@ -871,9 +1018,14 @@ export default function CheckoutFlow({
 
                 {/* Total Summary recap */}
                 <div className="bg-brand-surface-container/60 p-5 rounded-sm border border-brand-outline-variant/20 space-y-3">
-                  <h4 className="text-[10px] font-semibold text-brand-umber uppercase tracking-widest mb-2 pb-2 border-b border-[#c5a880]/15">
-                    Order Summary Recalculated
-                  </h4>
+                  <div className="flex justify-between items-center pb-2 border-b border-[#c5a880]/15">
+                    <h4 className="text-[10px] font-semibold text-brand-umber uppercase tracking-widest">
+                      Order Summary Recalculated
+                    </h4>
+                    <span className="text-[10px] text-brand-gold font-medium">
+                      {selectedGov?.governorate} ({selectedGov?.governorate_ar})
+                    </span>
+                  </div>
                   {cartItems.map((item) => (
                     <div key={item.id} className="flex justify-between text-xs text-brand-outline font-light">
                       <span>
@@ -891,17 +1043,31 @@ export default function CheckoutFlow({
                   {selectedPointsTier && (
                     <div className="flex justify-between text-xs text-emerald-700 font-medium">
                       <span>خصم نقاط الولاء / Loyalty Discount (-{selectedPointsTier.points} PTS)</span>
-                      <span>-EGP {Math.round(total * (selectedPointsTier.percentage / 100)).toLocaleString()}</span>
+                      <span>-EGP {Math.round(currentTotal * (selectedPointsTier.percentage / 100)).toLocaleString()}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-xs text-brand-outline font-light">
-                     <span>Delivery Fee / سعر التوصيل</span>
-                     <span>EGP {deliveryFee.toLocaleString()}</span>
+                     <span className="flex items-center gap-1.5">
+                       <Truck className="w-3.5 h-3.5 text-brand-gold" />
+                       <span>Shipping ({selectedGov?.governorate || "Egypt"})</span>
+                     </span>
+                     {isFreeShipping ? (
+                       <span className="flex items-center gap-1.5 font-mono">
+                         <span className="line-through text-neutral-400 text-[11px]">EGP {baseDeliveryFee}</span>
+                         <span className="font-bold text-emerald-700 bg-emerald-100/90 px-1.5 py-0.5 rounded text-[10px]">
+                           0 EGP (مجاني / FREE)
+                         </span>
+                       </span>
+                     ) : (
+                       <span className="font-mono font-semibold text-brand-umber">EGP {activeDeliveryFee.toLocaleString()}</span>
+                     )}
                   </div>
                   <div className="h-px bg-brand-outline-variant/10 w-full pt-1" />
                   <div className="flex justify-between items-end font-serif font-semibold text-brand-umber text-base pt-1">
                     <span>{selectedPointsTier ? "Final Payable / المبلغ المطلوب" : "Total Bill"}</span>
-                    <span>EGP {(selectedPointsTier ? Math.max(0, total - Math.round(total * (selectedPointsTier.percentage / 100))) : total).toLocaleString()}</span>
+                    <span className="font-bold text-brand-umber">
+                      EGP {(selectedPointsTier ? Math.max(0, currentTotal - Math.round(currentTotal * (selectedPointsTier.percentage / 100))) : currentTotal).toLocaleString()}
+                    </span>
                   </div>
                 </div>
 
@@ -1010,21 +1176,28 @@ export default function CheckoutFlow({
                         <span>-EGP {pointsDiscountAmount.toLocaleString()}</span>
                       </div>
                     )}
+                    <div className="flex justify-between text-xs text-brand-outline font-light">
+                      <span>Shipping ({selectedGov?.governorate || "Egypt"}):</span>
+                      <span>EGP {activeDeliveryFee.toLocaleString()}</span>
+                    </div>
                     <div className="h-px bg-brand-outline-variant/10 my-2" />
                     <div className="flex justify-between font-semibold text-brand-umber">
-                      <span>Total Amount Paid:</span>
-                      <span className="text-brand-gold font-bold">EGP {(total - pointsDiscountAmount).toLocaleString()}</span>
+                      <span>Total Amount:</span>
+                      <span className="text-brand-gold font-bold">EGP {(currentTotal - pointsDiscountAmount).toLocaleString()}</span>
                     </div>
                   </div>
 
                   <div className="bg-brand-surface-container/40 p-3 rounded-sm border border-brand-outline-variant/10 space-y-1">
                     <span className="text-[9px] font-bold text-brand-umber uppercase block tracking-wider">
-                      Delivery Address:
+                      Delivery Address & Destination:
                     </span>
                     <p className="text-[10px] text-brand-outline font-light leading-snug">
-                      {shippingName}
+                      <strong className="text-brand-umber">{shippingName}</strong> ({shippingPhone})
                       <br />
-                      {shippingAddress}, {shippingCity}, {shippingZip}
+                      {shippingAddress}, {shippingCity}
+                      <br />
+                      <span className="font-medium text-brand-umber">{selectedGov?.governorate} — {selectedGov?.governorate_ar}</span>
+                      {shippingZip ? `, Postal: ${shippingZip}` : ""}
                     </p>
                   </div>
                 </div>

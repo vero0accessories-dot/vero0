@@ -1,24 +1,12 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
-  Mail,
-  Phone,
-  MapPin,
-  Clock,
-  Send,
   MessageCircle,
   Sparkles,
-  ShieldCheck,
   CheckCircle2,
-  Calendar,
-  Gem,
-  ArrowRight,
   ChevronDown,
-  Globe,
-  Instagram,
-  Headphones,
-  HelpCircle,
-  FileText,
+  Copy,
+  Languages,
 } from "lucide-react";
 import { UserProfile } from "../types";
 import { safeFetch } from "../utils/apiUtils";
@@ -29,15 +17,133 @@ interface ContactPageProps {
   onNavigateToTrack?: () => void;
 }
 
+const isUserAdminAccount = (u: UserProfile | null): boolean => {
+  if (!u) return false;
+  const email = (u.email || "").toLowerCase().trim();
+  const name = (u.name || "").toLowerCase().trim();
+  return (
+    u.role === "admin" ||
+    email === "vero2026@vero.com" ||
+    email === "admin@vero.com" ||
+    name === "vero executive admin"
+  );
+};
+
+const buildInquiryMessage = (
+  data: {
+    inquiryType: string;
+    name: string;
+    email: string;
+    phone?: string;
+    orderNumber?: string;
+    subject?: string;
+    message: string;
+  },
+  lang: "ar" | "en"
+): string => {
+  if (lang === "ar") {
+    const categoryLabelsAr: Record<string, string> = {
+      general: "استفسار عام",
+      order: "متابعة طلب",
+      warranty: "ضمان وصيانة",
+      bespoke: "تصميم خاص وحفر فضة",
+    };
+    const cat = categoryLabelsAr[data.inquiryType] || "استفسار عام";
+
+    const lines: string[] = [
+      "مرحباً فريق VERO،",
+      "",
+      `أود التواصل بخصوص طلب: ${cat}.`,
+      "",
+      `الاسم: ${data.name.trim()}`,
+      `البريد الإلكتروني: ${data.email.trim()}`,
+    ];
+
+    if (data.phone && data.phone.trim()) {
+      lines.push(`رقم الهاتف: ${data.phone.trim()}`);
+    }
+
+    if (data.orderNumber && data.orderNumber.trim()) {
+      lines.push(`رقم الطلب: ${data.orderNumber.trim()}`);
+    }
+
+    if (data.subject && data.subject.trim()) {
+      lines.push(`الموضوع: ${data.subject.trim()}`);
+    }
+
+    lines.push("", "تفاصيل الاستفسار:", data.message.trim(), "", "شكراً لكم،", "عميل VERO");
+    return lines.join("\n");
+  } else {
+    const categoryLabelsEn: Record<string, string> = {
+      general: "General Inquiry",
+      order: "Order Support",
+      warranty: "Warranty & Care",
+      bespoke: "Bespoke & Custom Commission",
+    };
+    const categoryLabel = categoryLabelsEn[data.inquiryType] || "General Inquiry";
+    const article = /^[aeiou]/i.test(categoryLabel) ? "an" : "a";
+
+    const headerLines: string[] = [
+      "Hello VERO Team,",
+      "",
+      `I’m contacting you regarding ${article} ${categoryLabel} request.`,
+      "",
+      `Name: ${data.name.trim()}`,
+      `Email: ${data.email.trim()}`,
+    ];
+
+    if (data.phone && data.phone.trim()) {
+      headerLines.push(`Phone: ${data.phone.trim()}`);
+    }
+
+    if (data.orderNumber && data.orderNumber.trim()) {
+      headerLines.push(`Order No.: ${data.orderNumber.trim()}`);
+    }
+
+    if (data.subject && data.subject.trim()) {
+      headerLines.push(`Subject: ${data.subject.trim()}`);
+    }
+
+    const messageBlocks: string[] = [
+      headerLines.join("\n"),
+      "",
+      "Message:",
+      data.message.trim(),
+      "",
+      "Thank you,",
+      "VERO Client",
+    ];
+
+    return messageBlocks.join("\n");
+  }
+};
+
 export default function ContactPage({
   user,
-  onNavigateToShop,
-  onNavigateToTrack,
 }: ContactPageProps) {
-  // Form State
+  // Language State: defaults to Arabic, can toggle to English
+  const [lang, setLang] = useState<"ar" | "en">(() => {
+    try {
+      const saved = localStorage.getItem("vero_contact_lang");
+      return saved === "en" ? "en" : "ar";
+    } catch {
+      return "ar";
+    }
+  });
+
+  const handleSetLang = (newLang: "ar" | "en") => {
+    setLang(newLang);
+    try {
+      localStorage.setItem("vero_contact_lang", newLang);
+    } catch {
+      // ignore
+    }
+  };
+
+  // Form State - prepopulate genuine customer accounts only
   const [formData, setFormData] = useState({
-    name: user?.name || "",
-    email: user?.email || "",
+    name: !isUserAdminAccount(user) ? (user?.name || "") : "",
+    email: !isUserAdminAccount(user) ? (user?.email || "") : "",
     phone: "",
     orderNumber: "",
     inquiryType: "general", // 'general', 'bespoke', 'order', 'warranty'
@@ -45,21 +151,27 @@ export default function ContactPage({
     message: "",
   });
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedTicket, setSubmittedTicket] = useState<{
     ticketId: string;
     submittedAt: string;
     name: string;
+    email: string;
+    phone: string;
+    orderNumber: string;
     inquiryType: string;
+    subject: string;
+    message: string;
   } | null>(null);
+
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   // FAQ Accordion State
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   // Sync user updates to form if user logs in
   React.useEffect(() => {
-    if (user) {
+    if (user && !isUserAdminAccount(user)) {
       setFormData((prev) => ({
         ...prev,
         name: prev.name || user.name || "",
@@ -68,145 +180,350 @@ export default function ContactPage({
     }
   }, [user]);
 
+  const validateFormFields = (showError = true): boolean => {
+    if (!formData.name.trim()) {
+      if (showError) {
+        setErrorMessage(
+          lang === "ar" ? "يرجى كتابة الاسم بالكامل." : "Please enter your full name."
+        );
+      }
+      return false;
+    }
+    if (!formData.email.trim()) {
+      if (showError) {
+        setErrorMessage(
+          lang === "ar" ? "يرجى إدخال البريد الإلكتروني." : "Please enter your email address."
+        );
+      }
+      return false;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email.trim())) {
+      if (showError) {
+        setErrorMessage(
+          lang === "ar" ? "يرجى إدخال بريد إلكتروني صحيح." : "Please enter a valid email address."
+        );
+      }
+      return false;
+    }
+    if (!formData.message.trim()) {
+      if (showError) {
+        setErrorMessage(
+          lang === "ar" ? "يرجى كتابة تفاصيل استفسارك." : "Please enter your message details."
+        );
+      }
+      return false;
+    }
+    if (showError) setErrorMessage(null);
+    return true;
+  };
+
   const handleOpenWhatsApp = (e?: React.MouseEvent) => {
     if (e) e.preventDefault();
-    const lines = [
-      `*New Contact Message - VERO Luxury Concierge*`,
-      formData.name ? `Name: ${formData.name}` : "",
-      formData.email ? `Email: ${formData.email}` : "",
-      formData.phone ? `Phone: ${formData.phone}` : "",
-      formData.orderNumber ? `Order No: ${formData.orderNumber}` : "",
-      formData.subject ? `Subject: ${formData.subject}` : "",
-      formData.message ? `Message:\n${formData.message}` : "Hello VERO team, I would like to inquire about your collections.",
-    ]
-      .filter(Boolean)
-      .join("\n");
 
-    const text = encodeURIComponent(lines);
-    window.open(`https://wa.me/201559907692?text=${text}`, "_blank");
-  };
+    const currentData = submittedTicket
+      ? {
+          inquiryType: submittedTicket.inquiryType,
+          name: submittedTicket.name,
+          email: submittedTicket.email,
+          phone: submittedTicket.phone,
+          orderNumber: submittedTicket.orderNumber || submittedTicket.ticketId,
+          subject: submittedTicket.subject,
+          message: submittedTicket.message,
+        }
+      : formData;
 
-  const handleOpenInstagram = (e?: React.MouseEvent) => {
-    if (e) e.preventDefault();
-    window.open("https://instagram.com/vero.luxury", "_blank");
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.name.trim() || !formData.email.trim() || !formData.message.trim()) {
-      setErrorMessage("Please fill in all required fields (name, email, and message).");
+    if (!submittedTicket && !validateFormFields(true)) {
+      const elem = document.getElementById("contact-inquiry-form");
+      if (elem) elem.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
 
-    setIsSubmitting(true);
-    setErrorMessage(null);
+    const messageText = buildInquiryMessage(currentData, lang);
+    const text = encodeURIComponent(messageText);
 
-    const ticketId = `VR-${Date.now().toString().slice(-6)}`;
-
-    try {
-      await safeFetch("/api/contact", {
+    // Save ticket in background
+    if (!submittedTicket) {
+      const ticketId = `VR-${Date.now().toString().slice(-6)}`;
+      safeFetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
           ticketId,
+          language: lang,
           userTier: user?.tier || "Guest",
           createdAt: new Date().toISOString(),
         }),
-      });
+      }).catch(() => {});
 
       setSubmittedTicket({
         ticketId,
         submittedAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        orderNumber: formData.orderNumber,
         inquiryType: formData.inquiryType,
+        subject: formData.subject,
+        message: formData.message,
       });
+    }
 
-      setFormData((prev) => ({
-        ...prev,
-        subject: "",
-        message: "",
-        orderNumber: "",
-      }));
-    } catch (err: any) {
-      console.error("Error submitting contact form:", err);
-      setSubmittedTicket({
-        ticketId,
-        submittedAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        name: formData.name,
-        inquiryType: formData.inquiryType,
-      });
-    } finally {
-      setIsSubmitting(false);
+    window.open(`https://wa.me/201559907692?text=${text}`, "_blank");
+  };
+
+  const handleCopyMessage = async (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
+    const currentData = submittedTicket
+      ? {
+          inquiryType: submittedTicket.inquiryType,
+          name: submittedTicket.name,
+          email: submittedTicket.email,
+          phone: submittedTicket.phone,
+          orderNumber: submittedTicket.orderNumber || submittedTicket.ticketId,
+          subject: submittedTicket.subject,
+          message: submittedTicket.message,
+        }
+      : formData;
+
+    if (!submittedTicket && !validateFormFields(true)) {
+      const elem = document.getElementById("contact-inquiry-form");
+      if (elem) elem.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+
+    const messageText = buildInquiryMessage(currentData, lang);
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(messageText);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = messageText;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 3500);
+    } catch (err) {
+      console.warn("Failed to copy message:", err);
     }
   };
 
-  const faqs = [
-    {
-      q: "How long does delivery take?",
-      a: "Orders are typically delivered within 2 to 4 business days depending on your region and shipping carrier. Our concierge team will reach out to confirm your order details and delivery window.",
+  // Content dictionary for Arabic and English
+  const content = {
+    ar: {
+      conciergeBadge: "الكونسيرج الخاص • أتيليه VERO",
+      pageTitle: "تواصل مع VERO",
+      pageSubtitle:
+        "نحن هنا لنقدم لك تجربة عملاء استثنائية تليق بذوقك الرفيع. سواء كنت ترغب في استشارة تنسيق قطع، أو تنفيذ تصميم خاص وحفر بالفضة، أو الاستفسار عن طلب قائم، فريقنا في خدمتك دائماً.",
+      formBadge: "تواصل فوري",
+      formTitle: "استفسارات خاصة وخدمة العملاء",
+      formSubtitle:
+        "املأ بياناتك أدناه للتواصل الفوري والمباشر مع مستشاري VERO عبر تطبيق واتساب.",
+      categoryLabel: "نوع الاستفسار",
+      categories: [
+        { id: "general", label: "استفسار عام", sub: "تفاصيل المنتجات والكتالوج" },
+        { id: "order", label: "متابعة الطلبات", sub: "حالة الشحنة والتوصيل" },
+        { id: "warranty", label: "الضمان والصيانة", sub: "خدمات الصيانة والضمان" },
+      ],
+      nameLabel: "الاسم بالكامل",
+      namePlaceholder: "مثال: أحمد محمد",
+      emailLabel: "البريد الإلكتروني",
+      emailPlaceholder: "example@domain.com",
+      phoneLabel: "رقم الهاتف / واتساب (اختياري)",
+      phonePlaceholder: "+20 100 000 0000",
+      orderLabel: "رقم الطلب (اختياري)",
+      orderPlaceholder: "مثال: VR-89410",
+      subjectLabel: "الموضوع (اختياري)",
+      subjectPlaceholder: "مثال: استفسار حول حفر الاسم على الفضة",
+      messageLabel: "تفاصيل الرسالة",
+      messagePlaceholder:
+        "اكتب استفسارك هنا وسيقوم فريق خدمة عملاء VERO بالرد عليك فوراً عبر واتساب...",
+      whatsappBtnTitle: "تواصل عبر واتساب",
+      whatsappBtnSub: "اضغط لفتح المحادثة وإرسال تفاصيل استفسارك فوراً",
+      successTitle: "تم تجهيز رسالتك بنجاح",
+      successMsg: (name: string) =>
+        `شكراً لك ${name}. تم تجهيز استفسارك ومشاركته مع فريق كونسيرج VERO لتقديم الدعم السريع.`,
+      ticketRef: "رقم الاستفسار",
+      ticketTime: "التوقيت",
+      sendAnother: "إرسال استفسار آخر",
+      openWhatsAppAgain: "إعادة فتح محادثة واتساب",
+      copyInquiry: "نسخ نص الاستفسار",
+      copied: "تم النسخ إلى الحافظة!",
+      faqBadge: "الأسئلة الشائعة",
+      faqTitle: "دليل الاستفسارات وخدمة العملاء",
+      faqSubtitle:
+        "إجابات سريعة ومباشرة حول مواعيد التوصيل، سياسات الاسترجاع والاستبدال، وضمان VERO الفاخر.",
+      faqs: [
+        {
+          q: "كم يستغرق توصيل الطلب إلى عنواني؟",
+          a: "يتم توصيل الطلبات عادةً خلال 2 إلى 4 أيام عمل بحسب منطقتك ومحافظتك. يتواصل معك فريق خدمة العملاء مسبقاً لتأكيد التفاصيل وموعد الاستلام المناسب لك.",
+        },
+        {
+          q: "ما هي سياسة الاسترجاع والاستبدال؟",
+          a: "نوفر نافذة استبدال لمدة 4 أيام وفترة استرجاع لمدة 3 أيام من تاريخ استلام الشحنة، شريطة أن تكون القطعة في حالتها الأصلية غير المستعملة وبكامل تغليف VERO المميز.",
+        },
+        {
+          q: "ما هو الضمان المتاح على قطع ومجوهرات VERO؟",
+          a: "كل قطعة من VERO مشمولة بضمان كامل لمدة عام كامل ضد عيوب الصناعة أو تغير لون الطلاء المبكر. نوفر الفحص، الصيانة، أو الاستبدال المجاني.",
+        },
+        {
+          q: "كيف يمكنني التواصل المباشر مع فريق خدمة العملاء؟",
+          a: "فريق الكونسيرج الخاص بنا متاح على مدار الساعة عبر محادثات واتساب المباشرة للرد السريع على كافة استفساراتك وتجهيز طلباتك الخاصة.",
+        },
+      ],
+      footerQuote: "«وتذكر دائماً: تفاصيلك هي التي تصنع الفارق.»",
     },
-    {
-      q: "What is the return and exchange policy?",
-      a: "We offer a 4-day exchange window and a 3-day return period from the date of delivery, provided the piece is in its original, unworn condition with all signature VERO packaging intact.",
+    en: {
+      conciergeBadge: "Private Concierge & Atelier",
+      pageTitle: "Contact VERO",
+      pageSubtitle:
+        "We are dedicated to providing an elevated client experience. Whether you seek personal styling guidance, bespoke commissions, or support with an existing order, our advisors are at your service.",
+      formBadge: "Instant Contact",
+      formTitle: "Bespoke Inquiries & Client Support",
+      formSubtitle:
+        "Share your details below to connect instantly with our concierge team through WhatsApp.",
+      categoryLabel: "Inquiry Category",
+      categories: [
+        { id: "general", label: "General Inquiry", sub: "Product info & catalog" },
+        { id: "order", label: "Order Support", sub: "Status & tracking" },
+        { id: "warranty", label: "Warranty & Care", sub: "Repairs & guarantees" },
+      ],
+      nameLabel: "Full Name",
+      namePlaceholder: "e.g. Arthur Smith",
+      emailLabel: "Email Address",
+      emailPlaceholder: "client@example.com",
+      phoneLabel: "Phone / WhatsApp (Optional)",
+      phonePlaceholder: "+20 100 000 0000",
+      orderLabel: "Order No. (Optional)",
+      orderPlaceholder: "e.g. VR-89410",
+      subjectLabel: "Subject (Optional)",
+      subjectPlaceholder: "e.g. Inquiring about custom silver engraving",
+      messageLabel: "Message",
+      messagePlaceholder:
+        "Provide details about your request and our concierge team will respond promptly on WhatsApp...",
+      whatsappBtnTitle: "WhatsApp Concierge",
+      whatsappBtnSub: "Send message directly on WhatsApp",
+      successTitle: "Message Prepared Successfully",
+      successMsg: (name: string) =>
+        `Thank you, ${name}. Your inquiry has been logged with our client concierge and we will get back to you promptly on WhatsApp.`,
+      ticketRef: "Reference Ticket",
+      ticketTime: "Time",
+      sendAnother: "Send Another Message",
+      openWhatsAppAgain: "Open WhatsApp Again",
+      copyInquiry: "Copy Inquiry Text",
+      copied: "Copied to Clipboard!",
+      faqBadge: "Frequently Asked Questions",
+      faqTitle: "Customer Support FAQ",
+      faqSubtitle:
+        "Quick answers regarding shipping timelines, returns, exchanges, and the VERO warranty.",
+      faqs: [
+        {
+          q: "How long does delivery take?",
+          a: "Orders are typically delivered within 2 to 4 business days depending on your region. Our concierge team will reach out to confirm your order details and delivery window.",
+        },
+        {
+          q: "What is the return and exchange policy?",
+          a: "We offer a 4-day exchange window and a 3-day return period from the date of delivery, provided the piece is in its original, unworn condition with all signature VERO packaging intact.",
+        },
+        {
+          q: "What warranty is included with VERO pieces?",
+          a: "Every VERO creation is backed by a full 1-year warranty against craftsmanship defects or premature color tarnishing. We provide complimentary inspection, replacement, or repair.",
+        },
+        {
+          q: "How can I reach customer support?",
+          a: "Our concierge team is available round-the-clock via WhatsApp to assist you immediately.",
+        },
+      ],
+      footerQuote: "“And always remember: your details make the difference.”",
     },
-    {
-      q: "What warranty is included with VERO pieces?",
-      a: "Every VERO creation is backed by a full 1-year warranty against craftsmanship defects or premature color tarnishing. We provide complimentary inspection, replacement, or repair.",
-    },
-    {
-      q: "How can I reach customer support?",
-      a: "Our concierge team is available round-the-clock via WhatsApp and Instagram Direct. You can also submit an inquiry ticket above, and an advisor will respond promptly.",
-    },
-  ];
+  };
+
+  const t = content[lang];
+  const isRtl = lang === "ar";
 
   return (
-    <div className="min-h-screen bg-[#fff8f3] text-brand-umber pt-24 pb-20 px-4 sm:px-6 lg:px-12" dir="ltr">
+    <div
+      className="min-h-screen bg-[#fff8f3] text-brand-umber pt-24 pb-20 px-4 sm:px-6 lg:px-12 transition-colors duration-200"
+      dir={isRtl ? "rtl" : "ltr"}
+    >
       <div className="max-w-7xl mx-auto space-y-16">
+        {/* Language Switcher Bar */}
+        <div className="flex justify-center pt-2">
+          <div className="inline-flex items-center gap-1.5 p-1 bg-white/90 backdrop-blur-sm border border-brand-gold/30 rounded-full shadow-xs">
+            <Languages className="w-3.5 h-3.5 text-brand-gold mx-1.5" />
+            <button
+              type="button"
+              onClick={() => handleSetLang("ar")}
+              className={`px-3 py-0.5 text-[11px] font-semibold rounded-full transition-all cursor-pointer ${
+                lang === "ar"
+                  ? "bg-brand-umber text-white shadow-xs"
+                  : "text-brand-outline hover:text-brand-umber"
+              }`}
+            >
+              العربية
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSetLang("en")}
+              className={`px-3 py-0.5 text-[11px] font-semibold rounded-full transition-all cursor-pointer ${
+                lang === "en"
+                  ? "bg-brand-umber text-white shadow-xs"
+                  : "text-brand-outline hover:text-brand-umber"
+              }`}
+            >
+              English
+            </button>
+          </div>
+        </div>
+
         {/* Top Header Section */}
-        <section className="text-center max-w-3xl mx-auto space-y-4 pt-6">
+        <section className="text-center max-w-3xl mx-auto space-y-3">
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-gold/10 border border-brand-gold/25 text-brand-gold text-[10px] sm:text-xs font-bold uppercase tracking-[0.25em]"
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-gold/10 border border-brand-gold/25 text-brand-gold text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em]"
           >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Private Concierge &amp; Atelier</span>
+            <Sparkles className="w-3 h-3" />
+            <span>{t.conciergeBadge}</span>
           </motion.div>
 
           <motion.h1
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="font-serif text-3xl sm:text-5xl lg:text-6xl font-normal text-brand-umber tracking-wide"
+            className="font-serif text-2xl sm:text-3xl md:text-4xl lg:text-[42px] font-normal text-brand-umber tracking-wide"
           >
-            Contact VERO
+            {t.pageTitle}
           </motion.h1>
 
           <motion.p
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="font-sans text-xs sm:text-sm text-brand-outline font-light leading-relaxed max-w-2xl mx-auto"
+            className="font-sans text-[11px] sm:text-xs text-brand-outline font-light leading-relaxed max-w-xl mx-auto"
           >
-            We are dedicated to providing an elevated client experience. Whether you seek personal styling guidance, bespoke commissions, or support with an existing order, our advisors are at your service.
+            {t.pageSubtitle}
           </motion.p>
         </section>
 
         {/* Main Interactive Contact Form */}
-        <section id="contact-inquiry-form" className="max-w-3xl mx-auto">
-          <div className="bg-white rounded-2xl p-6 sm:p-10 border border-brand-outline-variant/30 shadow-md space-y-8">
+        <section id="contact-inquiry-form" className="max-w-2xl mx-auto">
+          <div className="bg-white rounded-2xl p-5 sm:p-8 border border-brand-outline-variant/30 shadow-md space-y-6">
             <div>
-              <div className="flex items-center gap-2 text-brand-gold text-xs font-bold uppercase tracking-[0.2em] mb-1">
-                <Sparkles className="w-4 h-4" />
-                <span>Send a Message</span>
+              <div className="flex items-center gap-1.5 text-brand-gold text-[10px] font-bold uppercase tracking-[0.18em] mb-1">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>{t.formBadge}</span>
               </div>
-              <h2 className="font-serif text-2xl sm:text-3xl text-brand-umber font-normal">
-                Bespoke Inquiries &amp; Client Support
+              <h2 className="font-serif text-lg sm:text-2xl text-brand-umber font-normal">
+                {t.formTitle}
               </h2>
-              <p className="text-xs text-brand-outline font-light mt-1.5">
-                Share your details with us below or connect instantly through WhatsApp and Instagram.
+              <p className="text-[11px] text-brand-outline font-light mt-1">
+                {t.formSubtitle}
               </p>
             </div>
 
@@ -214,230 +531,205 @@ export default function ContactPage({
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="bg-amber-50/70 border border-brand-gold/40 rounded-xl p-8 text-center space-y-5"
+                className="bg-amber-50/70 border border-brand-gold/40 rounded-xl p-6 sm:p-8 text-center space-y-4"
               >
-                <div className="w-16 h-16 bg-brand-gold text-white rounded-full flex items-center justify-center mx-auto shadow-lg shadow-brand-gold/20">
-                  <CheckCircle2 className="w-8 h-8" />
+                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-brand-gold text-white rounded-full flex items-center justify-center mx-auto shadow-md shadow-brand-gold/20">
+                  <CheckCircle2 className="w-6 h-6 sm:w-7 sm:h-7" />
                 </div>
-                <div className="space-y-2">
-                  <h3 className="font-serif text-xl font-semibold text-brand-umber">
-                    Message Received Successfully
+                <div className="space-y-1.5">
+                  <h3 className="font-serif text-lg font-semibold text-brand-umber">
+                    {t.successTitle}
                   </h3>
-                  <p className="text-xs text-brand-outline leading-relaxed max-w-md mx-auto">
-                    Thank you, <strong className="text-brand-umber">{submittedTicket.name}</strong>. Your inquiry has been logged with our client concierge and we will get back to you shortly.
+                  <p className="text-[11px] text-brand-outline leading-relaxed max-w-md mx-auto">
+                    {t.successMsg(submittedTicket.name)}
                   </p>
                 </div>
 
                 {/* Ticket Receipt Box */}
-                <div className="bg-white border border-brand-outline-variant/30 rounded-lg p-4 max-w-sm mx-auto flex items-center justify-between font-mono text-xs">
-                  <div className="text-left">
-                    <span className="text-[10px] text-brand-outline block uppercase tracking-widest">Reference Ticket</span>
-                    <span className="font-bold text-brand-gold text-sm">{submittedTicket.ticketId}</span>
+                <div className="bg-white border border-brand-outline-variant/30 rounded-lg p-3 max-w-xs mx-auto flex items-center justify-between font-mono text-[11px]">
+                  <div className={isRtl ? "text-right" : "text-left"}>
+                    <span className="text-[9px] text-brand-outline block uppercase tracking-widest">
+                      {t.ticketRef}
+                    </span>
+                    <span className="font-bold text-brand-gold text-xs">{submittedTicket.ticketId}</span>
                   </div>
-                  <div className="text-right">
-                    <span className="text-[10px] text-brand-outline block uppercase tracking-widest">Time</span>
-                    <span className="text-brand-umber font-semibold">{submittedTicket.submittedAt}</span>
+                  <div className={isRtl ? "text-left" : "text-right"}>
+                    <span className="text-[9px] text-brand-outline block uppercase tracking-widest">
+                      {t.ticketTime}
+                    </span>
+                    <span className="text-brand-umber font-semibold text-xs">{submittedTicket.submittedAt}</span>
                   </div>
                 </div>
 
-                <div className="pt-3 flex flex-wrap items-center justify-center gap-4">
+                <div className="pt-2 flex flex-wrap items-center justify-center gap-2.5">
                   <button
                     onClick={() => setSubmittedTicket(null)}
-                    className="px-5 py-2.5 text-xs font-semibold text-brand-umber bg-white border border-brand-outline-variant/40 rounded-lg hover:bg-brand-surface-low transition-colors cursor-pointer"
+                    className="px-3.5 py-2 text-[11px] font-semibold text-brand-umber bg-white border border-brand-outline-variant/40 rounded-lg hover:bg-brand-surface-low transition-colors cursor-pointer"
                   >
-                    Send Another Message
+                    {t.sendAnother}
                   </button>
                   <button
                     onClick={handleOpenWhatsApp}
-                    className="px-5 py-2.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                    className="px-4 py-2 text-[11px] font-semibold text-white bg-[#25D366] hover:bg-[#20bd5a] rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
                   >
                     <MessageCircle className="w-3.5 h-3.5 fill-white stroke-none" />
-                    <span>Chat on WhatsApp</span>
+                    <span>{t.openWhatsAppAgain}</span>
                   </button>
                   <button
-                    onClick={handleOpenInstagram}
-                    className="px-5 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-[#833ab4] via-[#fd1d1d] to-[#fcb045] hover:opacity-95 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                    onClick={handleCopyMessage}
+                    className="px-3.5 py-2 text-[11px] font-semibold text-brand-umber bg-brand-surface-low border border-brand-outline-variant/40 hover:bg-white rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
                   >
-                    <Instagram className="w-3.5 h-3.5" />
-                    <span>Chat on Instagram</span>
+                    {copySuccess ? (
+                      <>
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                        <span className="text-emerald-700 font-semibold">{t.copied}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3 text-brand-gold" />
+                        <span>{t.copyInquiry}</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </motion.div>
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={(e) => { e.preventDefault(); handleOpenWhatsApp(); }} className="space-y-4">
                 {errorMessage && (
-                  <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg">
+                  <div className="p-2.5 bg-red-50 border border-red-200 text-red-700 text-[11px] rounded-lg">
                     {errorMessage}
                   </div>
                 )}
 
                 {/* Inquiry Type Chips */}
-                <div className="space-y-2">
-                  <label className="block text-[11px] font-semibold text-brand-umber uppercase tracking-wider">
-                    Inquiry Category
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-semibold text-brand-umber uppercase tracking-wider">
+                    {t.categoryLabel}
                   </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                    {[
-                      { id: "general", label: "General Inquiry", sub: "Product info & catalog" },
-                      { id: "order", label: "Order Support", sub: "Status & tracking" },
-                      { id: "warranty", label: "Warranty & Care", sub: "Repairs & guarantees" },
-                    ].map((t) => (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {t.categories.map((cat) => (
                       <button
-                        key={t.id}
+                        key={cat.id}
                         type="button"
-                        onClick={() => setFormData((p) => ({ ...p, inquiryType: t.id }))}
-                        className={`p-3 text-left rounded-xl border text-xs transition-all duration-200 flex flex-col justify-center cursor-pointer ${
-                          formData.inquiryType === t.id
+                        onClick={() => setFormData((p) => ({ ...p, inquiryType: cat.id }))}
+                        className={`p-2.5 rounded-xl border text-[11px] transition-all duration-200 flex flex-col justify-center cursor-pointer ${
+                          isRtl ? "text-right" : "text-left"
+                        } ${
+                          formData.inquiryType === cat.id
                             ? "border-brand-gold bg-brand-gold/10 text-brand-umber font-semibold shadow-xs"
                             : "border-brand-outline-variant/30 text-brand-outline hover:border-brand-gold/50 bg-white"
                         }`}
                       >
-                        <span className="font-medium text-xs text-brand-umber">{t.label}</span>
-                        <span className="text-[10px] text-brand-outline/80 mt-0.5">{t.sub}</span>
+                        <span className="font-medium text-[11px] text-brand-umber">{cat.label}</span>
+                        <span className="text-[9px] text-brand-outline/80 mt-0.5">{cat.sub}</span>
                       </button>
                     ))}
                   </div>
                 </div>
 
                 {/* Name & Email Row */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="block text-[11px] font-semibold text-brand-umber uppercase tracking-wider">
-                      Full Name <span className="text-red-500">*</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-semibold text-brand-umber uppercase tracking-wider">
+                      {t.nameLabel} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       required
                       value={formData.name}
                       onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
-                      placeholder="e.g. Arthur Smith"
-                      className="w-full bg-[#fff8f3]/60 border border-brand-outline-variant/40 focus:border-brand-gold focus:bg-white rounded-xl py-3 px-4 text-xs font-light tracking-wide outline-none transition-all"
+                      placeholder={t.namePlaceholder}
+                      className="w-full bg-[#fff8f3]/60 border border-brand-outline-variant/40 focus:border-brand-gold focus:bg-white rounded-xl py-2.5 px-3.5 text-[11px] sm:text-xs font-light tracking-wide outline-none transition-all"
                     />
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="block text-[11px] font-semibold text-brand-umber uppercase tracking-wider">
-                      Email Address <span className="text-red-500">*</span>
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-semibold text-brand-umber uppercase tracking-wider">
+                      {t.emailLabel} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="email"
                       required
                       value={formData.email}
                       onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))}
-                      placeholder="e.g. client@example.com"
-                      className="w-full bg-[#fff8f3]/60 border border-brand-outline-variant/40 focus:border-brand-gold focus:bg-white rounded-xl py-3 px-4 text-xs font-light tracking-wide outline-none transition-all"
+                      placeholder={t.emailPlaceholder}
+                      className="w-full bg-[#fff8f3]/60 border border-brand-outline-variant/40 focus:border-brand-gold focus:bg-white rounded-xl py-2.5 px-3.5 text-[11px] sm:text-xs font-light tracking-wide outline-none transition-all"
                     />
                   </div>
                 </div>
 
                 {/* Phone & Order Number Row */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="block text-[11px] font-semibold text-brand-umber uppercase tracking-wider">
-                      Phone / WhatsApp (Optional)
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-semibold text-brand-umber uppercase tracking-wider">
+                      {t.phoneLabel}
                     </label>
                     <input
                       type="tel"
                       value={formData.phone}
                       onChange={(e) => setFormData((p) => ({ ...p, phone: e.target.value }))}
-                      placeholder="+20 100 000 0000"
-                      className="w-full bg-[#fff8f3]/60 border border-brand-outline-variant/40 focus:border-brand-gold focus:bg-white rounded-xl py-3 px-4 text-xs font-light tracking-wide outline-none transition-all"
+                      placeholder={t.phonePlaceholder}
+                      className="w-full bg-[#fff8f3]/60 border border-brand-outline-variant/40 focus:border-brand-gold focus:bg-white rounded-xl py-2.5 px-3.5 text-[11px] sm:text-xs font-light tracking-wide outline-none transition-all"
                     />
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="block text-[11px] font-semibold text-brand-umber uppercase tracking-wider">
-                      Order No. (Optional)
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-semibold text-brand-umber uppercase tracking-wider">
+                      {t.orderLabel}
                     </label>
                     <input
                       type="text"
                       value={formData.orderNumber}
                       onChange={(e) => setFormData((p) => ({ ...p, orderNumber: e.target.value }))}
-                      placeholder="e.g. VR-89410"
-                      className="w-full bg-[#fff8f3]/60 border border-brand-outline-variant/40 focus:border-brand-gold focus:bg-white rounded-xl py-3 px-4 text-xs font-light tracking-wide outline-none transition-all"
+                      placeholder={t.orderPlaceholder}
+                      className="w-full bg-[#fff8f3]/60 border border-brand-outline-variant/40 focus:border-brand-gold focus:bg-white rounded-xl py-2.5 px-3.5 text-[11px] sm:text-xs font-light tracking-wide outline-none transition-all"
                     />
                   </div>
                 </div>
 
                 {/* Subject */}
-                <div className="space-y-1.5">
-                  <label className="block text-[11px] font-semibold text-brand-umber uppercase tracking-wider">
-                    Subject
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-semibold text-brand-umber uppercase tracking-wider">
+                    {t.subjectLabel}
                   </label>
                   <input
                     type="text"
                     value={formData.subject}
                     onChange={(e) => setFormData((p) => ({ ...p, subject: e.target.value }))}
-                    placeholder="e.g. Inquiring about custom silver engraving"
-                    className="w-full bg-[#fff8f3]/60 border border-brand-outline-variant/40 focus:border-brand-gold focus:bg-white rounded-xl py-3 px-4 text-xs font-light tracking-wide outline-none transition-all"
+                    placeholder={t.subjectPlaceholder}
+                    className="w-full bg-[#fff8f3]/60 border border-brand-outline-variant/40 focus:border-brand-gold focus:bg-white rounded-xl py-2.5 px-3.5 text-[11px] sm:text-xs font-light tracking-wide outline-none transition-all"
                   />
                 </div>
 
                 {/* Message */}
-                <div className="space-y-1.5">
-                  <label className="block text-[11px] font-semibold text-brand-umber uppercase tracking-wider">
-                    Message <span className="text-red-500">*</span>
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-semibold text-brand-umber uppercase tracking-wider">
+                    {t.messageLabel} <span className="text-red-500">*</span>
                   </label>
                   <textarea
                     required
-                    rows={4}
+                    rows={3}
                     value={formData.message}
                     onChange={(e) => setFormData((p) => ({ ...p, message: e.target.value }))}
-                    placeholder="Provide details about your request and our concierge team will respond promptly..."
-                    className="w-full bg-[#fff8f3]/60 border border-brand-outline-variant/40 focus:border-brand-gold focus:bg-white rounded-xl py-3 px-4 text-xs font-light tracking-wide outline-none transition-all resize-y"
+                    placeholder={t.messagePlaceholder}
+                    className="w-full bg-[#fff8f3]/60 border border-brand-outline-variant/40 focus:border-brand-gold focus:bg-white rounded-xl py-2.5 px-3.5 text-[11px] sm:text-xs font-light tracking-wide outline-none transition-all resize-y"
                   />
                 </div>
 
-                {/* Send Buttons: WhatsApp and Instagram as requested */}
-                <div className="pt-2 space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                    {/* 1. WhatsApp Button */}
-                    <motion.button
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.98 }}
-                      type="button"
-                      onClick={handleOpenWhatsApp}
-                      className="py-4 px-6 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-xl font-sans text-xs font-semibold tracking-wider transition-all shadow-md flex items-center justify-center gap-2.5 cursor-pointer"
-                    >
-                      <MessageCircle className="w-5 h-5 fill-white stroke-none" />
-                      <div className="flex flex-col items-start leading-tight text-left">
-                        <span className="font-bold text-sm">WhatsApp</span>
-                        <span className="text-[10px] opacity-90 font-normal">Send message on WhatsApp</span>
-                      </div>
-                    </motion.button>
-
-                    {/* 2. Instagram Button */}
-                    <motion.button
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.98 }}
-                      type="button"
-                      onClick={handleOpenInstagram}
-                      className="py-4 px-6 bg-gradient-to-r from-[#833ab4] via-[#fd1d1d] to-[#fcb045] hover:opacity-95 text-white rounded-xl font-sans text-xs font-semibold tracking-wider transition-all shadow-md flex items-center justify-center gap-2.5 cursor-pointer"
-                    >
-                      <Instagram className="w-5 h-5" />
-                      <div className="flex flex-col items-start leading-tight text-left">
-                        <span className="font-bold text-sm">Instagram</span>
-                        <span className="text-[10px] opacity-90 font-normal">Direct message on Instagram</span>
-                      </div>
-                    </motion.button>
-                  </div>
-
-                  {/* Submit Directly */}
+                {/* Direct Action Button: WhatsApp as the sole, prominent contact method */}
+                <div className="pt-2">
                   <motion.button
                     whileHover={{ scale: 1.01 }}
                     whileTap={{ scale: 0.98 }}
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full py-3.5 px-6 bg-brand-gold hover:bg-brand-umber text-white rounded-xl font-sans text-xs font-semibold uppercase tracking-[0.15em] transition-all shadow-xs flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                    type="button"
+                    onClick={handleOpenWhatsApp}
+                    className="w-full py-3.5 px-5 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-xl font-sans text-xs font-semibold tracking-wider transition-all shadow-md flex items-center justify-center gap-2.5 cursor-pointer"
                   >
-                    {isSubmitting ? (
-                      <span>Sending message...</span>
-                    ) : (
-                      <>
-                        <Send className="w-3.5 h-3.5" />
-                        <span>Send Message via Email</span>
-                      </>
-                    )}
+                    <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 fill-white stroke-none shrink-0" />
+                    <div className={`flex flex-col leading-tight ${isRtl ? "items-start text-right" : "items-start text-left"}`}>
+                      <span className="font-bold text-xs sm:text-sm">{t.whatsappBtnTitle}</span>
+                      <span className="text-[10px] sm:text-[11px] opacity-95 font-normal">{t.whatsappBtnSub}</span>
+                    </div>
                   </motion.button>
                 </div>
               </form>
@@ -446,38 +738,38 @@ export default function ContactPage({
         </section>
 
         {/* Interactive FAQ Section */}
-        <section className="bg-white border border-brand-outline-variant/30 rounded-3xl p-6 sm:p-12 space-y-8">
-          <div className="text-center max-w-2xl mx-auto space-y-2">
-            <span className="text-brand-gold text-xs font-bold uppercase tracking-[0.2em]">
-              Frequently Asked Questions
+        <section className="bg-white border border-brand-outline-variant/30 rounded-3xl p-5 sm:p-10 space-y-6 max-w-2xl mx-auto">
+          <div className="text-center max-w-xl mx-auto space-y-1.5">
+            <span className="text-brand-gold text-[10px] font-bold uppercase tracking-[0.2em]">
+              {t.faqBadge}
             </span>
-            <h2 className="font-serif text-2xl sm:text-4xl text-brand-umber font-normal">
-              Customer Support FAQ
+            <h2 className="font-serif text-lg sm:text-2xl text-brand-umber font-normal">
+              {t.faqTitle}
             </h2>
-            <p className="text-xs text-brand-outline font-light">
-              Quick answers regarding shipping timelines, returns, exchanges, and the VERO warranty.
+            <p className="text-[11px] text-brand-outline font-light">
+              {t.faqSubtitle}
             </p>
           </div>
 
-          <div className="max-w-3xl mx-auto space-y-4">
-            {faqs.map((faq, index) => {
+          <div className="max-w-xl mx-auto space-y-3">
+            {t.faqs.map((faq, index) => {
               const isOpen = openFaq === index;
               return (
                 <div
                   key={index}
-                  className="border border-brand-outline-variant/30 rounded-2xl overflow-hidden bg-brand-surface-low/40 transition-colors"
+                  className="border border-brand-outline-variant/30 rounded-xl overflow-hidden bg-brand-surface-low/40 transition-colors"
                 >
                   <button
                     onClick={() => setOpenFaq(isOpen ? null : index)}
-                    className="w-full p-5 sm:p-6 text-left flex justify-between items-center gap-4 focus:outline-none cursor-pointer"
+                    className="w-full p-4 sm:p-4.5 text-start flex justify-between items-center gap-3 focus:outline-none cursor-pointer"
                   >
-                    <div className="text-left flex-1">
-                      <h4 className="font-serif text-sm sm:text-base font-semibold text-brand-umber leading-snug">
+                    <div className="text-start flex-1">
+                      <h4 className="font-serif text-xs sm:text-sm font-semibold text-brand-umber leading-snug">
                         {faq.q}
                       </h4>
                     </div>
                     <ChevronDown
-                      className={`w-5 h-5 text-brand-gold shrink-0 transition-transform duration-300 ${
+                      className={`w-4 h-4 text-brand-gold shrink-0 transition-transform duration-300 ${
                         isOpen ? "rotate-180" : ""
                       }`}
                     />
@@ -490,9 +782,9 @@ export default function ContactPage({
                         animate={{ opacity: 1, height: "auto" }}
                         exit={{ opacity: 0, height: 0 }}
                         transition={{ duration: 0.3 }}
-                        className="px-5 sm:px-6 pb-6 pt-2 text-xs text-brand-outline font-light leading-relaxed border-t border-brand-outline-variant/15 space-y-2 text-left"
+                        className="px-4 sm:px-4.5 pb-4 pt-1 text-[11px] text-brand-outline font-light leading-relaxed border-t border-brand-outline-variant/15 space-y-1.5 text-start"
                       >
-                        <p className="font-normal text-brand-umber text-xs sm:text-sm leading-relaxed">
+                        <p className="font-normal text-brand-umber text-[11px] sm:text-xs leading-relaxed">
                           {faq.a}
                         </p>
                       </motion.div>
@@ -504,9 +796,9 @@ export default function ContactPage({
           </div>
 
           {/* VERO Tagline Footer */}
-          <div className="text-center pt-4 border-t border-brand-outline-variant/15">
-            <p className="font-serif italic text-base sm:text-lg text-brand-gold tracking-wide">
-              &ldquo;And always remember: your details make the difference.&rdquo;
+          <div className="text-center pt-3 border-t border-brand-outline-variant/15">
+            <p className="font-serif italic text-xs sm:text-sm text-brand-gold tracking-wide">
+              {t.footerQuote}
             </p>
           </div>
         </section>

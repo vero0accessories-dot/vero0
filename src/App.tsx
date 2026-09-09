@@ -119,6 +119,8 @@ export default function App() {
       setActiveTab("platinum-lounge");
     } else if (path === "/contact" || path === "/contact-us") {
       setActiveTab("contact");
+    } else if (path === "/login" || path === "/register" || path === "/signup" || path === "/signin") {
+      setAuthModalOpen(true);
     } else {
       setActiveTab("home");
     }
@@ -1155,7 +1157,7 @@ export default function App() {
 
   // Cart calculations
   const cartSubtotal = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
-  const deliveryFee = cart.length > 0 ? 50 : 0; // Flat-rate delivery fee
+  const deliveryFee = 0;
   
   // Promo code discounts
   const matchedPromo = promos.find((p) => p.code.toUpperCase() === activePromo.toUpperCase());
@@ -1171,7 +1173,7 @@ export default function App() {
     ? 0.15
     : 0;
   const discountAmount = cartSubtotal * discountMultiplier;
-  const cartTotal = cartSubtotal - discountAmount + deliveryFee;
+  const cartTotal = cartSubtotal - discountAmount;
 
   const handleApplyPromo = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1366,6 +1368,7 @@ export default function App() {
         activeTab={activeTab}
         setActiveTab={handleTabChange}
         cartCount={cartCount}
+        favoritesCount={favorites.length}
         openSearch={() => setSearchOpen(true)}
         user={user}
         onOpenAuth={() => setAuthModalOpen(true)}
@@ -2572,6 +2575,42 @@ export default function App() {
                         Summary
                       </h2>
 
+                      {/* Free Shipping Progress Indicator (2000 EGP Threshold) */}
+                      <div className="bg-white/80 p-3.5 rounded-sm border border-brand-outline-variant/30 space-y-2">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="flex items-center gap-1.5 font-medium text-brand-umber">
+                            <Truck className="w-3.5 h-3.5 text-brand-gold" />
+                            {cartSubtotal >= 2000 ? (
+                              <span className="text-emerald-700 font-semibold">شحن مجاني مفعّل لطلبك!</span>
+                            ) : (
+                              <span>توصيل مجاني عند 2,000 ج.م</span>
+                            )}
+                          </span>
+                          <span className="font-mono text-[10.5px] font-semibold text-brand-gold">
+                            {cartSubtotal >= 2000 ? "100%" : `${Math.min(100, Math.round((cartSubtotal / 2000) * 100))}%`}
+                          </span>
+                        </div>
+                        <div className="w-full h-1.5 bg-neutral-200 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full transition-all duration-500 rounded-full ${
+                              cartSubtotal >= 2000 ? "bg-emerald-600" : "bg-brand-gold"
+                            }`}
+                            style={{ width: `${Math.min(100, (cartSubtotal / 2000) * 100)}%` }}
+                          />
+                        </div>
+                        <p className="text-[10px] text-brand-outline font-light">
+                          {cartSubtotal >= 2000 ? (
+                            <span className="text-emerald-700 font-medium">
+                              تهانينا! طلبك مؤهل للتوصيل المجاني إلى باب منزلك.
+                            </span>
+                          ) : (
+                            <span>
+                              أضف منتجات بقيمة <strong className="text-brand-umber font-semibold font-mono">EGP {(2000 - cartSubtotal).toLocaleString()}</strong> للحصول على توصيل مجاني!
+                            </span>
+                          )}
+                        </p>
+                      </div>
+
                       <div className="space-y-3 font-sans text-xs text-brand-outline font-light border-b border-brand-outline-variant/10 pb-5">
                         <div className="flex justify-between">
                           <span>SUBTOTAL</span>
@@ -2579,18 +2618,24 @@ export default function App() {
                             EGP {cartSubtotal.toLocaleString()}
                           </span>
                         </div>
+                        <div className="flex justify-between items-center">
+                          <span>DELIVERY</span>
+                          {cartSubtotal >= 2000 ? (
+                            <span className="font-semibold text-emerald-700">
+                              0 EGP (FREE / مجاني)
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-brand-outline">
+                              حسب المحافظة (مجاني من 2000 ج.م)
+                            </span>
+                          )}
+                        </div>
                         {activePromo && (
                           <div className="flex justify-between text-brand-gold font-semibold">
                             <span>PROMO ({activePromo})</span>
                             <span>-EGP {discountAmount.toLocaleString()}</span>
                           </div>
                         )}
-                        <div className="flex justify-between">
-                          <span>DELIVERY</span>
-                          <span className="font-semibold text-brand-umber">
-                            EGP {deliveryFee.toLocaleString()}
-                          </span>
-                        </div>
                       </div>
 
                       {/* Promocode entry */}
@@ -2914,10 +2959,15 @@ export default function App() {
         onClose={() => setIsPreOrderModalOpen(false)}
       />
 
-      {/* Private Member Authentication Modal */}
+      {/* Private Member Authentication Modal / Page */}
       <AuthModal
         isOpen={authModalOpen}
-        onClose={() => setAuthModalOpen(false)}
+        onClose={() => {
+          setAuthModalOpen(false);
+          if (["/login", "/register", "/signup", "/signin"].includes(location.pathname)) {
+            navigate("/");
+          }
+        }}
         onLoginSuccess={handleLoginSuccess}
       />
 

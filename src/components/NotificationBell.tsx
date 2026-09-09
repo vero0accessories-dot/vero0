@@ -278,7 +278,7 @@ export default function NotificationBell({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="absolute right-[-70px] sm:right-0 mt-3 w-[340px] sm:w-[390px] bg-[#fffdfa] rounded-2xl border border-brand-gold/25 shadow-[0_20px_50px_rgba(21,16,10,0.15)] z-50 overflow-hidden font-sans text-brand-dark"
+            className="absolute -right-12 sm:right-0 mt-3 w-[calc(100vw-24px)] max-w-[380px] bg-[#fffdfa] rounded-2xl border border-brand-gold/25 shadow-[0_20px_50px_rgba(21,16,10,0.15)] z-50 overflow-hidden font-sans text-brand-dark"
             dir="rtl"
           >
             {/* Header */}
